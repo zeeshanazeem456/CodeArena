@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox prefHeight="720.0" prefWidth="1100.0" spacing="12.0"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.codearena.controller.CodeEditorController">
+    <padding>
+        <Insets top="20.0" right="20.0" bottom="20.0" left="20.0" />
+    </padding>
+
+    <HBox alignment="CENTER_LEFT" spacing="12.0">
+        <Label fx:id="problemTitleLabel" style="-fx-font-size: 24px; -fx-font-weight: bold;" text="Problem Title" />
+        <Label fx:id="difficultyLabel" text="Difficulty" />
+    </HBox>
+
+    <Label text="Language: Java" />
+
+    <TextArea fx:id="codeArea" prefHeight="420.0" style="-fx-font-family: 'Consolas', 'Courier New', monospace;" wrapText="false" />
+
+    <HBox spacing="12.0">
+        <Button fx:id="runButton" mnemonicParsing="false" onAction="#handleRun" text="Run" />
+        <Button fx:id="submitButton" mnemonicParsing="false" onAction="#handleSubmit" text="Submit" />
+        <Button mnemonicParsing="false" onAction="#goToProblemDetail" text="Back" />
+    </HBox>
+
+    <Label fx:id="statusLabel" text="" />
+    <Label fx:id="verdictLabel" managed="false" text="" visible="false" />
+    <VBox fx:id="resultsBox" spacing="8.0" />
+</VBox>
