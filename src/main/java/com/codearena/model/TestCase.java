@@ -7,6 +7,7 @@ public class TestCase {
     private String input;
     private String expected;
     private boolean sample;
+    private int sequenceOrder;
 
     public TestCase() {
     }
@@ -17,6 +18,7 @@ public class TestCase {
         this.input = input;
         this.expected = expected;
         this.sample = sample;
+        this.sequenceOrder = id;
     }
 
     public int getId() {
@@ -57,5 +59,21 @@ public class TestCase {
 
     public void setSample(boolean sample) {
         this.sample = sample;
+    }
+
+    public boolean isHidden() {
+        return !sample;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.sample = !hidden;
+    }
+
+    public int getSequenceOrder() {
+        return sequenceOrder;
+    }
+
+    public void setSequenceOrder(int sequenceOrder) {
+        this.sequenceOrder = sequenceOrder;
     }
 }

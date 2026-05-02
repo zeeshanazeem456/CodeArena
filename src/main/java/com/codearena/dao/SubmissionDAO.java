@@ -93,6 +93,84 @@ public class SubmissionDAO extends BaseDAO<Submission> {
         }
     }
 
+    public List<Submission> findAll() {
+        String sql = """
+                SELECT id, user_id, problem_id, code, language, verdict, runtime_ms, battle_id, submitted_at
+                FROM submissions
+                ORDER BY submitted_at DESC, id DESC
+                """;
+
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                return mapSubmissions(resultSet);
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to load submissions.", exception);
+        }
+    }
+
+    public List<Submission> findRecentByUserId(int userId, int limit) {
+        String sql = """
+                SELECT id, user_id, problem_id, code, language, verdict, runtime_ms, battle_id, submitted_at
+                FROM submissions
+                WHERE user_id = ?
+                ORDER BY submitted_at DESC, id DESC
+                LIMIT ?
+                """;
+
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, userId);
+                statement.setInt(2, limit);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return mapSubmissions(resultSet);
+                }
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to load recent submissions.", exception);
+        }
+    }
+
+    public int countToday() {
+        String sql = "SELECT COUNT(*) FROM submissions WHERE date(submitted_at) = date('now')";
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getInt(1) : 0;
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to count today's submissions.", exception);
+        }
+    }
+
+    public java.util.Map<String, Integer> verdictBreakdown() {
+        String sql = """
+                SELECT verdict, COUNT(*) AS verdict_count
+                FROM submissions
+                WHERE verdict IS NOT NULL
+                GROUP BY verdict
+                ORDER BY verdict ASC
+                """;
+
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql);
+                 ResultSet resultSet = statement.executeQuery()) {
+                java.util.Map<String, Integer> breakdown = new java.util.LinkedHashMap<>();
+                while (resultSet.next()) {
+                    breakdown.put(resultSet.getString("verdict"), resultSet.getInt("verdict_count"));
+                }
+                return breakdown;
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to load verdict breakdown.", exception);
+        }
+    }
+
     public boolean hasAccepted(int userId, int problemId) {
         String sql = """
                 SELECT 1
@@ -131,6 +209,20 @@ public class SubmissionDAO extends BaseDAO<Submission> {
             }
         } catch (SQLException exception) {
             throw new DAOException("Failed to delete submission.", exception);
+        }
+    }
+
+    public void deleteByProblemId(int problemId) {
+        String sql = "DELETE FROM submissions WHERE problem_id = ?";
+
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, problemId);
+                statement.executeUpdate();
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to delete problem submissions.", exception);
         }
     }
 

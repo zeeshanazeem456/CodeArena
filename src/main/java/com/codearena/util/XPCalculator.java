@@ -36,4 +36,31 @@ public final class XPCalculator {
         }
         return "Novice";
     }
+
+    public static int forWinningBattle() {
+        return 75;
+    }
+
+    public static int forDailyStreak() {
+        return 20;
+    }
+
+    public static int nextRankThreshold(int xp) {
+        if (xp < 500) {
+            return 500;
+        }
+        if (xp < 1500) {
+            return 1500;
+        }
+        if (xp < 3500) {
+            return 3500;
+        }
+        if (xp < 7000) {
+            return 7000;
+        }
+        if (xp < 12000) {
+            return 12000;
+        }
+        return xp;
+    }
 }

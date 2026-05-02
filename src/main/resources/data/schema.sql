@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS problems (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     title        TEXT    NOT NULL,
     description  TEXT    NOT NULL,
+    constraints  TEXT,
+    input_format TEXT,
+    output_format TEXT,
     difficulty   TEXT    NOT NULL CHECK(difficulty IN ('Easy','Medium','Hard')),
     category     TEXT,
     tags         TEXT,
@@ -43,7 +46,8 @@ CREATE TABLE IF NOT EXISTS test_cases (
     problem_id INTEGER NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
     input      TEXT    NOT NULL,
     expected   TEXT    NOT NULL,
-    is_sample  INTEGER NOT NULL DEFAULT 0
+    is_sample  INTEGER NOT NULL DEFAULT 0,
+    sequence_order INTEGER NOT NULL DEFAULT 0
 );
 
 -- SUBMISSIONS
@@ -66,10 +70,21 @@ CREATE TABLE IF NOT EXISTS battles (
     player2_id  INTEGER NOT NULL REFERENCES users(id),
     problem_id  INTEGER NOT NULL REFERENCES problems(id),
     winner_id   INTEGER REFERENCES users(id),
+    join_code   TEXT UNIQUE,
+    battle_mode TEXT    NOT NULL DEFAULT 'ONE_V_ONE',
     status      TEXT    NOT NULL DEFAULT 'PENDING',
     started_at  TEXT,
     finished_at TEXT,
     time_limit  INTEGER NOT NULL DEFAULT 1800
+);
+
+-- BATTLE PARTICIPANTS
+CREATE TABLE IF NOT EXISTS battle_participants (
+    battle_id INTEGER NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
+    user_id   INTEGER NOT NULL REFERENCES users(id),
+    joined_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    ready_at  TEXT,
+    PRIMARY KEY (battle_id, user_id)
 );
 
 -- SQUADS

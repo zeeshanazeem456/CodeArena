@@ -17,7 +17,7 @@ CodeArena is a gamified competitive coding desktop application. Users solve algo
 
 | Role | Description |
 |---|---|
-| **Guest** | Can view the landing/login screen only. Cannot access problems or compete. |
+| **Guest** | Can register/login, browse the public problem catalog, view public problem details, and view the public leaderboard. Cannot solve, submit, compete, join squads, or access profile/admin screens. |
 | **Coder** | Registered user. Can solve problems, compete in battles, join squads, and track progress. |
 | **Admin** | Can manage problems, view all users, manage reports, seed new content. |
 | **Judge System** | Internal automated actor. Compiles and evaluates code submissions. |
@@ -29,6 +29,7 @@ CodeArena is a gamified competitive coding desktop application. Users solve algo
 ### 3.1 Authentication
 
 - FR-AUTH-01: Guest can register a new account with username, email, and password.
+- FR-AUTH-01A: Guest can browse published problems and view the public leaderboard without logging in.
 - FR-AUTH-02: Passwords must be at least 8 characters and stored as BCrypt hashes.
 - FR-AUTH-03: Registered user can log in with username + password.
 - FR-AUTH-04: Session persists for the duration of the application run (no re-login required).

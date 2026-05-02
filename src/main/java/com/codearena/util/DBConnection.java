@@ -11,8 +11,7 @@ import java.sql.Statement;
 
 public final class DBConnection {
 
-    private static final Path DB_DIRECTORY = Paths.get(System.getProperty("user.home"), ".codearena");
-    private static final Path DB_PATH = DB_DIRECTORY.resolve("codearena.db");
+    private static final Path DB_PATH = resolveDatabasePath();
     private static final String DB_URL = "jdbc:sqlite:" + DB_PATH;
 
     private static Connection connection;
@@ -42,11 +41,29 @@ public final class DBConnection {
     }
 
     private static void ensureDatabaseDirectory() throws SQLException {
-        try {
-            Files.createDirectories(DB_DIRECTORY);
-        } catch (IOException exception) {
-            throw new SQLException("Unable to create database directory: " + DB_DIRECTORY, exception);
+        Path directory = DB_PATH.getParent();
+        if (directory == null) {
+            return;
         }
+        try {
+            Files.createDirectories(directory);
+        } catch (IOException exception) {
+            throw new SQLException("Unable to create database directory: " + directory, exception);
+        }
+    }
+
+    private static Path resolveDatabasePath() {
+        String propertyPath = System.getProperty("codearena.db.path");
+        if (propertyPath != null && !propertyPath.trim().isEmpty()) {
+            return Paths.get(propertyPath.trim()).toAbsolutePath().normalize();
+        }
+
+        String environmentPath = System.getenv("CODEARENA_DB_PATH");
+        if (environmentPath != null && !environmentPath.trim().isEmpty()) {
+            return Paths.get(environmentPath.trim()).toAbsolutePath().normalize();
+        }
+
+        return Paths.get(System.getProperty("user.dir"), "data", "codearena.db").toAbsolutePath().normalize();
     }
 
     private static void enableForeignKeys(Connection connection) throws SQLException {

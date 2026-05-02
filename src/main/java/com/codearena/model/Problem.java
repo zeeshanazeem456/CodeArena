@@ -4,6 +4,9 @@ public class Problem extends BaseEntity {
 
     private String title;
     private String description;
+    private String constraints;
+    private String inputFormat;
+    private String outputFormat;
     private Difficulty difficulty;
     private String category;
     private String tags;
@@ -42,6 +45,30 @@ public class Problem extends BaseEntity {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getConstraints() {
+        return constraints;
+    }
+
+    public void setConstraints(String constraints) {
+        this.constraints = constraints;
+    }
+
+    public String getInputFormat() {
+        return inputFormat;
+    }
+
+    public void setInputFormat(String inputFormat) {
+        this.inputFormat = inputFormat;
+    }
+
+    public String getOutputFormat() {
+        return outputFormat;
+    }
+
+    public void setOutputFormat(String outputFormat) {
+        this.outputFormat = outputFormat;
     }
 
     public Difficulty getDifficulty() {

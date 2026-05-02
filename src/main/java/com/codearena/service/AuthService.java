@@ -28,6 +28,9 @@ public class AuthService {
             if (user == null || password == null || !BCrypt.checkpw(password, user.getPassword())) {
                 throw new AuthException("Invalid username or password.");
             }
+            if (!user.isActive()) {
+                throw new AuthException("This account has been deactivated.");
+            }
 
             return user;
         } catch (AuthException exception) {
@@ -41,6 +44,9 @@ public class AuthService {
         try {
             if (isBlank(username) || isBlank(email) || isBlank(password)) {
                 throw new AuthException("Username, email, and password are required.");
+            }
+            if (password.length() < 8) {
+                throw new AuthException("Password must be at least 8 characters.");
             }
 
             if (isUsernameTaken(username)) {

@@ -1,12 +1,10 @@
 package com.codearena;
 
-import com.codearena.util.DBConnection;
-import com.codearena.util.SchemaInitializer;
-import java.io.IOException;
+import com.codearena.ui.ScreenFactory;
+import com.codearena.util.PersistenceHandler;
 import java.net.URL;
 import java.sql.SQLException;
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
@@ -16,10 +14,9 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
-            SchemaInitializer.run();
+            PersistenceHandler.initialize();
 
-            FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/fxml/login.fxml"));
-            Scene scene = new Scene(loader.load(), 1100, 720);
+            Scene scene = new Scene(ScreenFactory.create("login"), 1100, 720);
 
             primaryStage.setTitle("CodeArena");
             primaryStage.setMinWidth(900);
@@ -27,14 +24,14 @@ public class MainApp extends Application {
             primaryStage.setScene(scene);
             loadApplicationIcon(primaryStage);
             primaryStage.show();
-        } catch (IOException | SQLException exception) {
+        } catch (SQLException exception) {
             throw new IllegalStateException("Failed to launch CodeArena.", exception);
         }
     }
 
     @Override
     public void stop() throws Exception {
-        DBConnection.closeConnection();
+        PersistenceHandler.shutdown();
         super.stop();
     }
 

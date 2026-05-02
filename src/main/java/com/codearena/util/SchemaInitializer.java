@@ -25,8 +25,37 @@ public final class SchemaInitializer {
 
             String schemaSql = readSchema(inputStream);
             executeCreateTableStatements(schemaSql);
+            ensureSchemaMigrations();
         } catch (IOException exception) {
             throw new SQLException("Unable to read schema resource: " + SCHEMA_RESOURCE, exception);
+        }
+    }
+
+    private static void ensureSchemaMigrations() throws SQLException {
+        Connection connection = DBConnection.getConnection();
+        if (!columnExists(connection, "test_cases", "sequence_order")) {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("ALTER TABLE test_cases ADD COLUMN sequence_order INTEGER NOT NULL DEFAULT 0");
+            }
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("UPDATE test_cases SET sequence_order = id WHERE sequence_order = 0");
+            }
+        }
+        addTextColumnIfMissing(connection, "problems", "constraints");
+        addTextColumnIfMissing(connection, "problems", "input_format");
+        addTextColumnIfMissing(connection, "problems", "output_format");
+        addTextColumnIfMissing(connection, "battles", "join_code");
+        addTextColumnIfMissing(connection, "battles", "battle_mode");
+        createBattleParticipantsIfMissing(connection);
+        addTextColumnIfMissing(connection, "battle_participants", "ready_at");
+    }
+
+    private static void addTextColumnIfMissing(Connection connection, String tableName, String columnName) throws SQLException {
+        if (columnExists(connection, tableName, columnName)) {
+            return;
+        }
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " TEXT");
         }
     }
 
@@ -102,6 +131,36 @@ public final class SchemaInitializer {
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next();
             }
+        }
+    }
+
+    private static boolean columnExists(Connection connection, String tableName, String columnName) throws SQLException {
+        String sql = "PRAGMA table_info(" + tableName + ")";
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+            while (resultSet.next()) {
+                if (columnName.equalsIgnoreCase(resultSet.getString("name"))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static void createBattleParticipantsIfMissing(Connection connection) throws SQLException {
+        if (tableExists(connection, "battle_participants")) {
+            return;
+        }
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS battle_participants (
+                        battle_id INTEGER NOT NULL REFERENCES battles(id) ON DELETE CASCADE,
+                        user_id   INTEGER NOT NULL REFERENCES users(id),
+                        joined_at TEXT    NOT NULL DEFAULT (datetime('now')),
+                        ready_at  TEXT,
+                        PRIMARY KEY (battle_id, user_id)
+                    )
+                    """);
         }
     }
 }

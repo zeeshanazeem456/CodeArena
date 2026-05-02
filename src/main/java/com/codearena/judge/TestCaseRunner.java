@@ -44,7 +44,7 @@ public final class TestCaseRunner {
                 joinReader(stdoutReader);
                 joinReader(stderrReader);
                 long runtimeMs = System.currentTimeMillis() - startTime;
-                return new TestCaseResult(Verdict.TLE, stdout.toString(), expectedOutput, runtimeMs);
+                return new TestCaseResult(Verdict.TLE, tc.getInput(), stdout.toString(), expectedOutput, runtimeMs);
             }
 
             joinReader(stdoutReader);
@@ -53,18 +53,25 @@ public final class TestCaseRunner {
             long runtimeMs = System.currentTimeMillis() - startTime;
             if (process.exitValue() != 0) {
                 String actualOutput = stderr.length() > 0 ? stderr.toString() : stdout.toString();
-                return new TestCaseResult(Verdict.RE, actualOutput, expectedOutput, runtimeMs);
+                return new TestCaseResult(Verdict.RE, tc.getInput(), actualOutput, expectedOutput, runtimeMs);
             }
 
             String actualOutput = stdout.toString();
-            Verdict verdict = actualOutput.trim().equals(expectedOutput == null ? "" : expectedOutput.trim())
+            Verdict verdict = normalizeForComparison(actualOutput).equals(normalizeForComparison(expectedOutput))
                     ? Verdict.AC
                     : Verdict.WA;
-            return new TestCaseResult(verdict, actualOutput, expectedOutput, runtimeMs);
+            return new TestCaseResult(verdict, tc.getInput(), actualOutput, expectedOutput, runtimeMs);
         } catch (Exception exception) {
             long runtimeMs = System.currentTimeMillis() - startTime;
-            return new TestCaseResult(Verdict.RE, "", expectedOutput, runtimeMs);
+            return new TestCaseResult(Verdict.RE, tc.getInput(), exception.getMessage(), expectedOutput, runtimeMs);
         }
+    }
+
+    private static String normalizeForComparison(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\r\n", "\n").replace("\r", "\n").trim();
     }
 
     private static Thread createReaderThread(InputStream inputStream, StringBuilder target) {
@@ -97,12 +104,14 @@ public final class TestCaseRunner {
     public static final class TestCaseResult {
 
         private final Verdict verdict;
+        private final String input;
         private final String actualOutput;
         private final String expectedOutput;
         private final long runtimeMs;
 
-        public TestCaseResult(Verdict verdict, String actualOutput, String expectedOutput, long runtimeMs) {
+        public TestCaseResult(Verdict verdict, String input, String actualOutput, String expectedOutput, long runtimeMs) {
             this.verdict = verdict;
+            this.input = input;
             this.actualOutput = actualOutput;
             this.expectedOutput = expectedOutput;
             this.runtimeMs = runtimeMs;
@@ -110,6 +119,10 @@ public final class TestCaseRunner {
 
         public Verdict getVerdict() {
             return verdict;
+        }
+
+        public String getInput() {
+            return input;
         }
 
         public String getActualOutput() {

@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 public final class Sandbox {
 
     private static final Logger LOGGER = Logger.getLogger(Sandbox.class.getName());
-    private static final Path BASE_DIR = Paths.get("/tmp/codearena");
+    private static final Path BASE_DIR = Paths.get(System.getProperty("java.io.tmpdir"), "codearena");
 
     private Sandbox() {
     }

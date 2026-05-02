@@ -70,22 +70,45 @@ public class ProblemService {
     }
 
     public List<Problem> getFilteredProblems(String keyword, String difficulty) {
+        return getFilteredProblems(keyword, difficulty, null);
+    }
+
+    public List<Problem> getFilteredProblems(String keyword, String difficulty, String categoryOrTag) {
         try {
             List<Problem> titleMatches = searchByTitle(keyword);
 
-            if (difficulty == null || difficulty.trim().isEmpty() || "All".equalsIgnoreCase(difficulty.trim())) {
-                return titleMatches;
+            List<Problem> filtered = titleMatches;
+
+            if (difficulty != null && !difficulty.trim().isEmpty() && !"All".equalsIgnoreCase(difficulty.trim())) {
+                Set<Integer> difficultyMatchedIds = filterByDifficulty(difficulty).stream()
+                        .map(Problem::getId)
+                        .collect(Collectors.toSet());
+
+                filtered = filtered.stream()
+                        .filter(problem -> difficultyMatchedIds.contains(problem.getId()))
+                        .collect(Collectors.toList());
             }
 
-            Set<Integer> difficultyMatchedIds = filterByDifficulty(difficulty).stream()
-                    .map(Problem::getId)
-                    .collect(Collectors.toSet());
+            if (categoryOrTag != null && !categoryOrTag.trim().isEmpty()) {
+                Set<Integer> categoryMatchedIds = problemDAO.filterByCategoryOrTag(categoryOrTag).stream()
+                        .map(Problem::getId)
+                        .collect(Collectors.toSet());
+                filtered = filtered.stream()
+                        .filter(problem -> categoryMatchedIds.contains(problem.getId()))
+                        .collect(Collectors.toList());
+            }
 
-            return titleMatches.stream()
-                    .filter(problem -> difficultyMatchedIds.contains(problem.getId()))
-                    .collect(Collectors.toList());
+            return filtered;
         } catch (Exception exception) {
             throw wrap(exception, "Failed to apply problem filters.");
+        }
+    }
+
+    public double getAcceptanceRate(int problemId) {
+        try {
+            return problemDAO.getAcceptanceRate(problemId);
+        } catch (Exception exception) {
+            throw wrap(exception, "Failed to load acceptance rate.");
         }
     }
 

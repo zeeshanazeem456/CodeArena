@@ -21,15 +21,10 @@
     </properties>
 
     <dependencies>
-        <!-- JavaFX UI toolkit for the desktop client and FXML-based screens. -->
+        <!-- JavaFX UI toolkit for the desktop client. Screens are built directly in Java. -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
-            <version>${javafx.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
         </dependency>
 

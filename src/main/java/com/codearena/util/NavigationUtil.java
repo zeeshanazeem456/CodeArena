@@ -1,10 +1,8 @@
 package com.codearena.util;
 
-import java.io.IOException;
+import com.codearena.ui.ScreenFactory;
 import javafx.event.ActionEvent;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -15,26 +13,21 @@ public final class NavigationUtil {
     private NavigationUtil() {
     }
 
-    public static void navigateTo(String fxmlName, ActionEvent event) {
-        navigateTo(fxmlName, (Node) event.getSource());
+    public static void navigateTo(String screenName, ActionEvent event) {
+        navigateTo(screenName, (Node) event.getSource());
     }
 
-    public static void navigateTo(String fxmlName, Node sourceNode) {
-        try {
-            FXMLLoader loader = new FXMLLoader(NavigationUtil.class.getResource("/fxml/" + fxmlName));
-            Parent root = loader.load();
-
-            Stage stage = (Stage) sourceNode.getScene().getWindow();
-            Scene currentScene = stage.getScene();
-            if (currentScene == null) {
-                stage.setScene(new Scene(root));
-            } else {
-                stage.setScene(new Scene(root, currentScene.getWidth(), currentScene.getHeight()));
-            }
-            stage.show();
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to navigate to " + fxmlName, exception);
+    public static void navigateTo(String screenName, Node sourceNode) {
+        Stage stage = (Stage) sourceNode.getScene().getWindow();
+        Scene currentScene = stage.getScene();
+        Scene nextScene;
+        if (currentScene == null) {
+            nextScene = new Scene(ScreenFactory.create(screenName));
+        } else {
+            nextScene = new Scene(ScreenFactory.create(screenName), currentScene.getWidth(), currentScene.getHeight());
         }
+        stage.setScene(nextScene);
+        stage.show();
     }
 
     public static void setFlashMessage(String message) {
