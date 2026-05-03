@@ -5,6 +5,7 @@ import com.codearena.dao.ProblemDAO;
 import com.codearena.dao.SubmissionDAO;
 import com.codearena.dao.UserDAO;
 import com.codearena.model.Battle;
+import com.codearena.model.Badge;
 import com.codearena.model.Submission;
 import com.codearena.model.User;
 import com.codearena.util.DAOException;
@@ -18,16 +19,23 @@ public class ProfileService {
     private final SubmissionDAO submissionDAO;
     private final BattleDAO battleDAO;
     private final ProblemDAO problemDAO;
+    private final BadgeService badgeService;
 
     public ProfileService() {
-        this(new UserDAO(), new SubmissionDAO(), new BattleDAO(), new ProblemDAO());
+        this(new UserDAO(), new SubmissionDAO(), new BattleDAO(), new ProblemDAO(), new BadgeService());
     }
 
     public ProfileService(UserDAO userDAO, SubmissionDAO submissionDAO, BattleDAO battleDAO, ProblemDAO problemDAO) {
+        this(userDAO, submissionDAO, battleDAO, problemDAO, new BadgeService());
+    }
+
+    public ProfileService(UserDAO userDAO, SubmissionDAO submissionDAO, BattleDAO battleDAO,
+                          ProblemDAO problemDAO, BadgeService badgeService) {
         this.userDAO = userDAO;
         this.submissionDAO = submissionDAO;
         this.battleDAO = battleDAO;
         this.problemDAO = problemDAO;
+        this.badgeService = badgeService;
     }
 
     public User getUser(int userId) {
@@ -48,9 +56,27 @@ public class ProfileService {
 
     public List<Battle> getBattleHistory(int userId) {
         try {
-            return battleDAO.findByUserId(userId);
+            List<Battle> battles = battleDAO.findByUserId(userId);
+            boolean expiredAny = false;
+            BattleService battleService = new BattleService();
+            for (Battle battle : battles) {
+                if ("ACTIVE".equalsIgnoreCase(battle.getStatus()) && battleService.expireIfNeeded(battle)) {
+                    expiredAny = true;
+                }
+            }
+            return expiredAny ? battleDAO.findByUserId(userId) : battles;
         } catch (Exception exception) {
             throw wrap(exception, "Failed to load battle history.");
+        }
+    }
+
+    public List<Badge> getBadges(int userId) {
+        try {
+            User user = userDAO.findById(userId);
+            badgeService.syncUserBadges(user);
+            return badgeService.getBadgesForUser(userId);
+        } catch (Exception exception) {
+            throw wrap(exception, "Failed to load badges.");
         }
     }
 
@@ -93,6 +119,39 @@ public class ProfileService {
         } catch (Exception exception) {
             return "#" + userId;
         }
+    }
+
+    public String getBattleOpponent(Battle battle, int currentUserId) {
+        if (battle == null) {
+            return "-";
+        }
+        String mode = battle.getBattleMode() == null ? "" : battle.getBattleMode();
+        if ("FREE_FOR_ALL".equalsIgnoreCase(mode)) {
+            return "Free for all";
+        }
+        if ("PENDING".equalsIgnoreCase(battle.getStatus())) {
+            return "Waiting for player";
+        }
+        int opponentId = battle.getPlayer1Id() == currentUserId ? battle.getPlayer2Id() : battle.getPlayer1Id();
+        return getUsername(opponentId);
+    }
+
+    public String getBattleOutcome(Battle battle, int currentUserId) {
+        if (battle == null) {
+            return "-";
+        }
+        if (battle.getWinnerId() != null) {
+            return battle.getWinnerId() == currentUserId ? "Win" : "Loss";
+        }
+        String status = battle.getStatus() == null ? "" : battle.getStatus().trim().toUpperCase();
+        return switch (status) {
+            case "DRAW" -> "Draw";
+            case "FINISHED" -> "Finished";
+            case "ACTIVE" -> "In Progress";
+            case "MATCHED" -> "Ready";
+            case "PENDING" -> "Waiting";
+            default -> status.isBlank() ? "-" : status;
+        };
     }
 
     private DAOException wrap(Exception exception, String message) {

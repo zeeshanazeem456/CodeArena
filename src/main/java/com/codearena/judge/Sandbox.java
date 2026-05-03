@@ -23,8 +23,12 @@ public final class Sandbox {
         return directory;
     }
 
-    public static void writeSourceFile(Path dir, String code) throws IOException {
-        Files.writeString(dir.resolve("Solution.java"), code, StandardCharsets.UTF_8);
+    public static void writeSourceFile(Path dir, String code, String language) throws IOException {
+        Files.writeString(dir.resolve(sourceFileName(language)), code, StandardCharsets.UTF_8);
+    }
+
+    private static String sourceFileName(String language) {
+        return "Python".equalsIgnoreCase(language) ? "solution.py" : "Solution.java";
     }
 
     public static void cleanup(int submissionId) {

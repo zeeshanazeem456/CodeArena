@@ -16,12 +16,12 @@ public final class TestCaseRunner {
     private TestCaseRunner() {
     }
 
-    public static TestCaseResult run(TestCase tc, Path workingDir) {
+    public static TestCaseResult run(TestCase tc, Path workingDir, String language) {
         long startTime = System.currentTimeMillis();
         String expectedOutput = tc.getExpected();
 
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder("java", "-cp", ".", "Solution");
+            ProcessBuilder processBuilder = new ProcessBuilder(runCommand(language));
             processBuilder.directory(workingDir.toFile());
 
             Process process = processBuilder.start();
@@ -65,6 +65,13 @@ public final class TestCaseRunner {
             long runtimeMs = System.currentTimeMillis() - startTime;
             return new TestCaseResult(Verdict.RE, tc.getInput(), exception.getMessage(), expectedOutput, runtimeMs);
         }
+    }
+
+    private static String[] runCommand(String language) {
+        if ("Python".equalsIgnoreCase(language)) {
+            return new String[]{"python", "solution.py"};
+        }
+        return new String[]{"java", "-cp", ".", "Solution"};
     }
 
     private static String normalizeForComparison(String value) {

@@ -2,6 +2,7 @@ package com.codearena.ui;
 
 import com.codearena.judge.Verdict;
 import com.codearena.model.Battle;
+import com.codearena.model.Badge;
 import com.codearena.model.Difficulty;
 import com.codearena.model.Problem;
 import com.codearena.model.Submission;
@@ -10,6 +11,7 @@ import com.codearena.model.User;
 import com.codearena.service.AdminService;
 import com.codearena.service.AnalyticsService;
 import com.codearena.service.AuthService;
+import com.codearena.service.BadgeService;
 import com.codearena.service.BattleService;
 import com.codearena.service.JudgeService;
 import com.codearena.service.LeaderboardService;
@@ -23,6 +25,7 @@ import com.codearena.util.SessionManager;
 import com.codearena.util.XPCalculator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.prefs.Preferences;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -55,17 +58,27 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.util.Duration;
 
 public final class ScreenFactory {
+
+    private static final Preferences PREFERENCES = Preferences.userNodeForPackage(ScreenFactory.class);
+    private static final String DARK_MODE_KEY = "darkMode";
 
     private static final String TEMPLATE = """
             import java.util.Scanner;
@@ -77,14 +90,27 @@ public final class ScreenFactory {
             }
             """;
 
+    private static final String PYTHON_TEMPLATE = """
+            import sys
+
+            def main():
+                data = sys.stdin.read().strip().split()
+                # your code here
+
+            if __name__ == "__main__":
+                main()
+            """;
+
     private static Problem selectedProblem;
     private static Battle selectedBattle;
+    private static String currentScreenName = "login";
 
     private ScreenFactory() {
     }
 
     public static Parent create(String screenName) {
-        return switch (normalize(screenName)) {
+        currentScreenName = normalize(screenName);
+        Parent screen = switch (currentScreenName) {
             case "login" -> login();
             case "register" -> register();
             case "dashboard" -> dashboard();
@@ -102,6 +128,8 @@ public final class ScreenFactory {
             case "admin-panel" -> adminPanel();
             default -> missing(screenName);
         };
+        applyTheme(screen);
+        return screen;
     }
 
     private static String normalize(String screenName) {
@@ -138,7 +166,8 @@ public final class ScreenFactory {
         publicLeaderboard.setOnAction(event -> NavigationUtil.navigateTo("leaderboard", publicLeaderboard));
         HBox guestLinks = new HBox(10, browseProblems, publicLeaderboard);
         guestLinks.setAlignment(Pos.CENTER);
-        root.getChildren().addAll(title, label("Login"), username, password, login, register, guestLinks, message);
+        root.getChildren().addAll(title, label("Login"), username, password, login, register, guestLinks,
+                themeToggleButton("login"), message);
         return root;
     }
 
@@ -170,7 +199,8 @@ public final class ScreenFactory {
 
         Hyperlink back = new Hyperlink("Back to login");
         back.setOnAction(event -> NavigationUtil.navigateTo("login", back));
-        root.getChildren().addAll(h1("Create Account"), username, email, password, confirm, submit, back, message);
+        root.getChildren().addAll(h1("Create Account"), username, email, password, confirm, submit, back,
+                themeToggleButton("register"), message);
         return root;
     }
 
@@ -207,7 +237,8 @@ public final class ScreenFactory {
                 navButton("Leaderboard", "leaderboard"),
                 navButton("Battle", "battle-lobby"),
                 navButton("Squad", "squad"),
-                navButton("Profile", "profile")
+                navButton("Profile", "profile"),
+                themeToggleButton("dashboard")
         );
         nav.setAlignment(Pos.CENTER);
         Button logout = primaryButton("Logout");
@@ -337,19 +368,29 @@ public final class ScreenFactory {
         JudgeService judgeService = new JudgeService();
         ProblemService problemService = new ProblemService();
         UserProgressService progressService = new UserProgressService();
+        BadgeService badgeService = new BadgeService();
         BorderPane root = shell("Code Editor");
         VBox top = new VBox(10);
         top.setPadding(new Insets(0, 0, 12, 0));
 
         Label title = h1(selectedProblem == null ? "Code Editor" : selectedProblem.getTitle());
         Label difficulty = badge(selectedProblem == null || selectedProblem.getDifficulty() == null ? "" : selectedProblem.getDifficulty().getLabel());
-        top.getChildren().addAll(new HBox(10, title, difficulty), label("Language: Java"));
+        ChoiceBox<String> language = languageChoice();
 
         TextArea code = new TextArea(TEMPLATE);
         code.setStyle("-fx-font-family: 'Consolas', 'Courier New', monospace;");
         code.setPrefRowCount(22);
         code.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         code.setWrapText(false);
+        language.getSelectionModel().selectedItemProperty().addListener((observable, oldLanguage, newLanguage) -> {
+            if (code.getText() == null || code.getText().isBlank()
+                    || code.getText().equals(templateForLanguage(oldLanguage))) {
+                code.setText(templateForLanguage(newLanguage));
+            }
+        });
+        HBox languageRow = new HBox(10, label("Language"), language);
+        languageRow.setAlignment(Pos.CENTER_LEFT);
+        top.getChildren().addAll(new HBox(10, title, difficulty), languageRow);
 
         Label status = errorLabel();
         Label verdict = new Label();
@@ -361,8 +402,10 @@ public final class ScreenFactory {
         Button back = backButton("Back", "problem-detail");
 
         Runnable[] evaluate = new Runnable[2];
-        evaluate[0] = () -> runJudge(true, code, status, verdict, results, run, submit, judgeService, problemService, progressService);
-        evaluate[1] = () -> runJudge(false, code, status, verdict, results, run, submit, judgeService, problemService, progressService);
+        evaluate[0] = () -> runJudge(true, code, language.getValue(), status, verdict, results, run, submit,
+                judgeService, problemService, progressService, badgeService);
+        evaluate[1] = () -> runJudge(false, code, language.getValue(), status, verdict, results, run, submit,
+                judgeService, problemService, progressService, badgeService);
         run.setOnAction(event -> evaluate[0].run());
         submit.setOnAction(event -> evaluate[1].run());
 
@@ -419,6 +462,7 @@ public final class ScreenFactory {
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabs.getTabs().add(new Tab("Submissions", submissionsTable(user == null ? List.of() : service.getSubmissionHistory(user.getId()), service)));
         tabs.getTabs().add(new Tab("Battles", battlesTable(user == null ? List.of() : service.getBattleHistory(user.getId()), service)));
+        tabs.getTabs().add(new Tab("Badges", badgesView(user == null ? List.of() : service.getBadges(user.getId()))));
         tabs.getTabs().add(new Tab("Edit", profileEditor(user, service)));
         root.setTop(top);
         root.setCenter(tabs);
@@ -541,6 +585,9 @@ public final class ScreenFactory {
         TextField joinCode = input("Enter battle code");
         Label codeValue = h1("No code yet");
         codeValue.setStyle("-fx-font-size: 34px; -fx-font-weight: bold;");
+        Button copyCode = copyCodeButton(codeValue, message);
+        HBox codeRow = new HBox(12, codeValue, copyCode);
+        codeRow.setAlignment(Pos.CENTER_LEFT);
         Label createState = label("Choose difficulty, create a match, then share the code with your friend.");
         createState.setWrapText(true);
         Label activeState = label("No active match yet.");
@@ -614,7 +661,7 @@ public final class ScreenFactory {
 
         HBox createActions = new HBox(10, label("Difficulty"), difficulty, createRoom);
         createActions.setAlignment(Pos.CENTER_LEFT);
-        VBox createPanel = simplePanel("Create Match", createActions, codeValue, createState);
+        VBox createPanel = simplePanel("Create Match", createActions, codeRow, createState);
 
         HBox joinActions = new HBox(10, joinCode, joinRoom);
         joinActions.setAlignment(Pos.CENTER_LEFT);
@@ -657,6 +704,9 @@ public final class ScreenFactory {
         Label message = errorLabel();
         Label codeValue = h1("No code yet");
         codeValue.setStyle("-fx-font-size: 34px; -fx-font-weight: bold;");
+        Button copyCode = copyCodeButton(codeValue, message);
+        HBox codeRow = new HBox(12, codeValue, copyCode);
+        codeRow.setAlignment(Pos.CENTER_LEFT);
         Label createState = label("Create a group match, share the code, then start when players join.");
         createState.setWrapText(true);
         Label joinState = label("Paste a group code to join your friends.");
@@ -758,7 +808,7 @@ public final class ScreenFactory {
 
         HBox createActions = new HBox(10, label("Difficulty"), difficulty, createRoom);
         createActions.setAlignment(Pos.CENTER_LEFT);
-        VBox createPanel = simplePanel("Create Free for All", createActions, codeValue, createState);
+        VBox createPanel = simplePanel("Create Free for All", createActions, codeRow, createState);
 
         HBox joinActions = new HBox(10, joinCode, joinRoom);
         joinActions.setAlignment(Pos.CENTER_LEFT);
@@ -881,6 +931,7 @@ public final class ScreenFactory {
         }
         BattleService battleService = new BattleService();
         JudgeService judgeService = new JudgeService();
+        BadgeService badgeService = new BadgeService();
         selectedBattle = selectedBattle == null ? null : battleService.getBattle(selectedBattle.getId());
         User currentUser = SessionManager.getCurrentUser();
         if (selectedBattle != null && !battleService.isParticipant(selectedBattle, currentUser.getId())) {
@@ -893,9 +944,16 @@ public final class ScreenFactory {
         boolean expiredOnOpen = selectedBattle != null && battleService.expireIfNeeded(selectedBattle);
         VBox root = page();
         root.setAlignment(Pos.TOP_LEFT);
+        ChoiceBox<String> language = languageChoice();
         TextArea code = new TextArea(TEMPLATE);
         code.setStyle("-fx-font-family: 'Consolas', 'Courier New', monospace;");
         code.setPrefHeight(430);
+        language.getSelectionModel().selectedItemProperty().addListener((observable, oldLanguage, newLanguage) -> {
+            if (code.getText() == null || code.getText().isBlank()
+                    || code.getText().equals(templateForLanguage(oldLanguage))) {
+                code.setText(templateForLanguage(newLanguage));
+            }
+        });
         Label status = errorLabel();
         if (selectedBattle != null && "MATCHED".equalsIgnoreCase(selectedBattle.getStatus())) {
             status.setText("Waiting for the other player to enter the battlefield...");
@@ -969,7 +1027,7 @@ public final class ScreenFactory {
                 return;
             }
             timer.setText("Time remaining: " + formatSeconds(battleService.getRemainingSeconds(selectedBattle)));
-            Submission submission = buildSubmission(problem, code.getText());
+            Submission submission = buildSubmission(problem, code.getText(), language.getValue());
             submission.setBattleId(selectedBattle.getId());
             submit.setDisable(true);
             status.setText("Judging...");
@@ -977,6 +1035,7 @@ public final class ScreenFactory {
                 selectedBattle = battleService.getBattle(selectedBattle.getId());
                 status.setText(report.getVerdict().getDisplayName());
                 if (report.getVerdict() == Verdict.AC) {
+                    badgeService.checkSubmissionBadges(currentUser, submission, problem);
                     boolean won = battleService.finishWithWinner(selectedBattle, currentUser.getId());
                     status.setText(won ? "You won this battle." : "Battle already finished.");
                     timer.setText("Battle finished.");
@@ -997,7 +1056,10 @@ public final class ScreenFactory {
                     : BattleService.MODE_RANDOM_ONE_V_ONE.equalsIgnoreCase(mode) ? "battle-random"
                     : "battle-1v1", back);
         });
-        root.getChildren().addAll(h1(problem == null ? "Battle Arena" : problem.getTitle()), opponent, timer, code,
+        HBox languageRow = new HBox(10, label("Language"), language);
+        languageRow.setAlignment(Pos.CENTER_LEFT);
+        root.getChildren().addAll(h1(problem == null ? "Battle Arena" : problem.getTitle()), opponent, timer,
+                languageRow, code,
                 new HBox(10, submit, back), status);
         return root;
     }
@@ -1022,9 +1084,9 @@ public final class ScreenFactory {
         return root;
     }
 
-    private static void runJudge(boolean sampleOnly, TextArea code, Label status, Label verdict, VBox results,
+    private static void runJudge(boolean sampleOnly, TextArea code, String language, Label status, Label verdict, VBox results,
                                  Button run, Button submit, JudgeService judgeService, ProblemService problemService,
-                                 UserProgressService progressService) {
+                                 UserProgressService progressService, BadgeService badgeService) {
         if (selectedProblem == null || SessionManager.getCurrentUser() == null) {
             status.setText("Problem or user session is missing.");
             return;
@@ -1033,7 +1095,7 @@ public final class ScreenFactory {
             status.setText("Code cannot be empty.");
             return;
         }
-        Submission submission = buildSubmission(selectedProblem, code.getText());
+        Submission submission = buildSubmission(selectedProblem, code.getText(), language);
         boolean alreadySolved = problemService.isSolvedByUser(selectedProblem.getId(), SessionManager.getCurrentUser().getId());
         status.setText(sampleOnly ? "Running..." : "Judging...");
         run.setDisable(true);
@@ -1049,6 +1111,7 @@ public final class ScreenFactory {
             if (!sampleOnly && report.getVerdict() == Verdict.AC) {
                 progressService.awardProblemSolved(SessionManager.getCurrentUser(), selectedProblem.getId(),
                         selectedProblem.getDifficulty(), alreadySolved);
+                badgeService.checkSubmissionBadges(SessionManager.getCurrentUser(), submission, selectedProblem);
             }
         }, error -> {
             status.setText(error);
@@ -1057,11 +1120,11 @@ public final class ScreenFactory {
         });
     }
 
-    private static Submission buildSubmission(Problem problem, String code) {
+    private static Submission buildSubmission(Problem problem, String code, String language) {
         Submission submission = new Submission();
         submission.setUserId(SessionManager.getCurrentUser().getId());
         submission.setProblemId(problem.getId());
-        submission.setLanguage("Java");
+        submission.setLanguage(normalizeLanguage(language));
         submission.setCode(code);
         return submission;
     }
@@ -1122,13 +1185,96 @@ public final class ScreenFactory {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.getColumns().addAll(stringColumn("Opponent", 180, battle -> {
             User current = SessionManager.getCurrentUser();
-            int opponent = current != null && battle.getPlayer1Id() == current.getId()
-                    ? battle.getPlayer2Id() : battle.getPlayer1Id();
-            return service.getUsername(opponent);
-        }), stringColumn("Outcome", 120, battle -> battle.getWinnerId() == null ? battle.getStatus()
-                : battle.getWinnerId() == SessionManager.getCurrentUser().getId() ? "Win" : "Loss"),
+            return service.getBattleOpponent(battle, current == null ? 0 : current.getId());
+        }), stringColumn("Outcome", 120, battle -> {
+            User current = SessionManager.getCurrentUser();
+            return service.getBattleOutcome(battle, current == null ? 0 : current.getId());
+        }),
                 stringColumn("Problem", 220, battle -> service.getProblemTitle(battle.getProblemId())));
         return table;
+    }
+
+    private static Parent badgesView(List<Badge> badges) {
+        List<Badge> safeBadges = badges == null ? List.of() : badges;
+        TabPane badgeTabs = new TabPane();
+        badgeTabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        badgeTabs.getTabs().add(new Tab("My Badges", badgeGallery(safeBadges.stream()
+                .filter(Badge::isEarned)
+                .toList(), true)));
+        badgeTabs.getTabs().add(new Tab("Total Badges", badgeGallery(safeBadges, false)));
+        return badgeTabs;
+    }
+
+    private static Parent badgeGallery(List<Badge> badges, boolean earnedOnly) {
+        VBox content = new VBox(14);
+        content.setPadding(new Insets(18));
+        content.setMaxWidth(Double.MAX_VALUE);
+        Label summary = h2(earnedOnly ? "My Badges" : "Total Badges");
+        Label count = mutedLabel(earnedOnly
+                ? badges.size() + " earned badge" + (badges.size() == 1 ? "" : "s")
+                : badges.size() + " badge" + (badges.size() == 1 ? "" : "s") + " available");
+        TilePane grid = new TilePane();
+        grid.setHgap(16);
+        grid.setVgap(16);
+        grid.setPrefColumns(4);
+        grid.setTileAlignment(Pos.TOP_LEFT);
+        grid.setMaxWidth(Double.MAX_VALUE);
+        if (badges.isEmpty()) {
+            grid.getChildren().add(emptyBadgeCard(earnedOnly
+                    ? "No badges earned yet. Solve problems or win battles to unlock your first one."
+                    : "Badges will appear here after the app seeds them."));
+        } else {
+            for (Badge badge : badges) {
+                grid.getChildren().add(badgeCard(badge));
+            }
+        }
+        content.getChildren().addAll(summary, count, grid);
+        return fitScroll(content);
+    }
+
+    private static VBox emptyBadgeCard(String message) {
+        VBox card = new VBox(10, label(message));
+        card.setPadding(new Insets(18));
+        card.setPrefSize(260, 160);
+        card.setAlignment(Pos.CENTER);
+        card.setStyle(panelStyle());
+        return card;
+    }
+
+    private static VBox badgeCard(Badge badge) {
+        ImageView icon = badgeIcon(badge, 156);
+        Label name = h2(badge.getName());
+        name.setWrapText(true);
+        Label status = mutedLabel(badge.isEarned() ? "Earned " + badge.getEarnedAt() : "Locked");
+        Label description = label(badge.getDescription());
+        description.setWrapText(true);
+        description.setMaxWidth(210);
+        Label category = badge(badge.getCategory());
+        VBox card = new VBox(9, icon, name, category, status, description);
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setPadding(new Insets(14));
+        card.setPrefSize(250, 330);
+        card.setMaxWidth(250);
+        card.setStyle(panelStyle());
+        card.setOpacity(badge.isEarned() ? 1.0 : 0.55);
+        return card;
+    }
+
+    private static ImageView badgeIcon(Badge badge, int size) {
+        ImageView imageView = new ImageView();
+        imageView.setFitWidth(size);
+        imageView.setFitHeight(size);
+        imageView.setPreserveRatio(true);
+        String path = badge == null ? null : badge.getImagePath();
+        if (path != null && !path.isBlank()) {
+            try (var stream = ScreenFactory.class.getResourceAsStream(path)) {
+                if (stream != null) {
+                    imageView.setImage(new Image(stream));
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return imageView;
     }
 
     private static Parent profileEditor(User user, ProfileService service) {
@@ -1483,6 +1629,7 @@ public final class ScreenFactory {
         area.setPrefRowCount(4);
         area.setWrapText(true);
         area.setMaxWidth(Double.MAX_VALUE);
+        area.setStyle(inputStyle());
         return area;
     }
 
@@ -1490,6 +1637,7 @@ public final class ScreenFactory {
         TextField field = new TextField();
         field.setPromptText(prompt);
         field.setMaxWidth(Double.MAX_VALUE);
+        field.setStyle(inputStyle());
         return field;
     }
 
@@ -1691,14 +1839,14 @@ public final class ScreenFactory {
     private static BorderPane shell(String title) {
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(20));
-        root.setStyle("-fx-background-color: #F6F8FA;");
+        root.setStyle(pageStyle());
         return root;
     }
 
     private static VBox page() {
         VBox root = new VBox(12);
         root.setPadding(new Insets(24));
-        root.setStyle("-fx-background-color: #F6F8FA;");
+        root.setStyle(pageStyle());
         return root;
     }
 
@@ -1713,12 +1861,14 @@ public final class ScreenFactory {
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
         scrollPane.setPannable(true);
-        scrollPane.setStyle("-fx-background-color: transparent;");
+        scrollPane.setStyle("-fx-background: " + backgroundColor() + "; -fx-background-color: transparent;");
         return scrollPane;
     }
 
     private static VBox header(String title) {
-        VBox header = new VBox(8, h1(title));
+        HBox titleRow = new HBox(12, h1(title), spacer(), themeToggleButton(currentScreenName));
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+        VBox header = new VBox(8, titleRow);
         header.setPadding(new Insets(20));
         return header;
     }
@@ -1729,22 +1879,26 @@ public final class ScreenFactory {
 
     private static Label h1(String text) {
         Label label = new Label(text);
-        label.setStyle("-fx-font-size: 28px; -fx-font-weight: bold;");
+        label.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: " + textColor() + ";");
         return label;
     }
 
     private static Label h2(String text) {
         Label label = new Label(text);
-        label.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        label.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + textColor() + ";");
         return label;
     }
 
     private static Label label(String text) {
-        return new Label(text == null ? "" : text);
+        Label label = new Label(text == null ? "" : text);
+        label.setStyle("-fx-text-fill: " + textColor() + ";");
+        return label;
     }
 
     private static Label mutedLabel(String text) {
-        return label(text);
+        Label label = label(text);
+        label.setStyle("-fx-text-fill: " + mutedTextColor() + ";");
+        return label;
     }
 
     private static String formatSeconds(int totalSeconds) {
@@ -1770,6 +1924,7 @@ public final class ScreenFactory {
         TextField field = new TextField();
         field.setPromptText(prompt);
         field.setMaxWidth(360);
+        field.setStyle(inputStyle());
         return field;
     }
 
@@ -1777,12 +1932,13 @@ public final class ScreenFactory {
         PasswordField field = new PasswordField();
         field.setPromptText(prompt);
         field.setMaxWidth(360);
+        field.setStyle(inputStyle());
         return field;
     }
 
     private static Button primaryButton(String text) {
         Button button = new Button(text);
-        button.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-weight: bold;");
+        button.setStyle("-fx-background-color: " + accentColor() + "; -fx-text-fill: white; -fx-font-weight: bold;");
         return button;
     }
 
@@ -1792,7 +1948,8 @@ public final class ScreenFactory {
 
     private static Button dangerButton(String text) {
         Button button = new Button(text);
-        button.setStyle("-fx-background-color: #CF222E; -fx-text-fill: white; -fx-font-weight: bold;");
+        button.setStyle("-fx-background-color: " + (isDarkMode() ? "#DA3633" : "#CF222E")
+                + "; -fx-text-fill: white; -fx-font-weight: bold;");
         return button;
     }
 
@@ -1807,7 +1964,7 @@ public final class ScreenFactory {
     private static VBox simplePanel(String title, Node... children) {
         VBox panel = new VBox(12);
         panel.setPadding(new Insets(16));
-        panel.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6; -fx-background-radius: 6;");
+        panel.setStyle(panelStyle());
         panel.getChildren().add(h2(title));
         panel.getChildren().addAll(children);
         panel.setMaxWidth(Double.MAX_VALUE);
@@ -1860,6 +2017,189 @@ public final class ScreenFactory {
         Button button = secondaryButton(text);
         button.setOnAction(event -> NavigationUtil.navigateTo(screen, button));
         return button;
+    }
+
+    private static Button copyCodeButton(Label codeValue, Label message) {
+        Button button = secondaryButton("Copy");
+        button.setOnAction(event -> {
+            String code = codeValue == null ? "" : codeValue.getText();
+            if (code == null || code.isBlank() || "No code yet".equalsIgnoreCase(code.trim())) {
+                if (message != null) {
+                    message.setText("Create a match first, then copy the code.");
+                }
+                return;
+            }
+            ClipboardContent content = new ClipboardContent();
+            content.putString(code.trim());
+            Clipboard.getSystemClipboard().setContent(content);
+            if (message != null) {
+                message.setText("Battle code copied.");
+            }
+        });
+        return button;
+    }
+
+    private static ChoiceBox<String> languageChoice() {
+        ChoiceBox<String> language = new ChoiceBox<>(FXCollections.observableArrayList("Java", "Python"));
+        language.setValue("Java");
+        language.setStyle(inputStyle());
+        return language;
+    }
+
+    private static String templateForLanguage(String language) {
+        return "Python".equalsIgnoreCase(language) ? PYTHON_TEMPLATE : TEMPLATE;
+    }
+
+    private static String normalizeLanguage(String language) {
+        return "Python".equalsIgnoreCase(language == null ? "" : language.trim()) ? "Python" : "Java";
+    }
+
+    private static Button themeToggleButton(String screen) {
+        Button button = secondaryButton(isDarkMode() ? "Light Mode" : "Dark Mode");
+        button.setOnAction(event -> {
+            setDarkMode(!isDarkMode());
+            NavigationUtil.navigateTo(screen == null || screen.isBlank() ? currentScreenName : screen, button);
+        });
+        return button;
+    }
+
+    private static Region spacer() {
+        Region region = new Region();
+        HBox.setHgrow(region, Priority.ALWAYS);
+        return region;
+    }
+
+    private static boolean isDarkMode() {
+        return PREFERENCES.getBoolean(DARK_MODE_KEY, false);
+    }
+
+    private static void setDarkMode(boolean darkMode) {
+        PREFERENCES.putBoolean(DARK_MODE_KEY, darkMode);
+    }
+
+    private static String pageStyle() {
+        return "-fx-background-color: " + backgroundColor() + ";";
+    }
+
+    private static String panelStyle() {
+        return "-fx-background-color: " + panelColor()
+                + "; -fx-border-color: " + borderColor()
+                + "; -fx-border-radius: 6; -fx-background-radius: 6;";
+    }
+
+    private static String inputStyle() {
+        return "-fx-control-inner-background: " + inputColor()
+                + "; -fx-background-color: " + inputColor()
+                + "; -fx-text-fill: " + textColor()
+                + "; -fx-prompt-text-fill: " + mutedTextColor()
+                + "; -fx-border-color: " + borderColor()
+                + "; -fx-border-radius: 4;";
+    }
+
+    private static String tableStyle() {
+        return "-fx-base: " + panelColor()
+                + "; -fx-control-inner-background: " + inputColor()
+                + "; -fx-background-color: " + panelColor()
+                + "; -fx-table-cell-border-color: " + borderColor()
+                + "; -fx-table-header-border-color: " + borderColor()
+                + "; -fx-text-background-color: " + textColor()
+                + "; -fx-selection-bar: " + accentColor()
+                + "; -fx-selection-bar-text: white;";
+    }
+
+    private static String tabStyle() {
+        return "-fx-background-color: " + panelColor()
+                + "; -fx-control-inner-background: " + inputColor()
+                + "; -fx-text-base-color: " + textColor()
+                + "; -fx-border-color: " + borderColor() + ";";
+    }
+
+    private static String backgroundColor() {
+        return isDarkMode() ? "#0D1117" : "#F6F8FA";
+    }
+
+    private static String panelColor() {
+        return isDarkMode() ? "#161B22" : "white";
+    }
+
+    private static String inputColor() {
+        return isDarkMode() ? "#0D1117" : "white";
+    }
+
+    private static String textColor() {
+        return isDarkMode() ? "#E6EDF3" : "#24292F";
+    }
+
+    private static String mutedTextColor() {
+        return isDarkMode() ? "#8B949E" : "#57606A";
+    }
+
+    private static String borderColor() {
+        return isDarkMode() ? "#30363D" : "#D0D7DE";
+    }
+
+    private static String accentColor() {
+        return isDarkMode() ? "#2F81F7" : "#0969DA";
+    }
+
+    private static void applyTheme(Node node) {
+        if (node == null) {
+            return;
+        }
+
+        if (node instanceof BorderPane) {
+            if (!hasCustomPanelStyle(node)) {
+                node.setStyle(pageStyle());
+            }
+        }
+        if (node instanceof Label label && !(node instanceof Button)) {
+            String style = label.getStyle() == null ? "" : label.getStyle();
+            if (!style.contains("-fx-text-fill")) {
+                label.setStyle(style + "; -fx-text-fill: " + textColor() + ";");
+            }
+        }
+        if (node instanceof TextInputControl input) {
+            String prefix = input.getStyle() == null ? "" : input.getStyle();
+            input.setStyle(prefix + "; " + inputStyle());
+        }
+        if (node instanceof ChoiceBox<?> choiceBox) {
+            choiceBox.setStyle("-fx-background-color: " + inputColor()
+                    + "; -fx-mark-color: " + textColor()
+                    + "; -fx-border-color: " + borderColor()
+                    + "; -fx-border-radius: 4;");
+        }
+        if (node instanceof TableView<?> tableView) {
+            tableView.setStyle(tableStyle());
+        }
+        if (node instanceof TabPane tabPane) {
+            tabPane.setStyle(tabStyle());
+        }
+        if (node instanceof ScrollPane scrollPane) {
+            scrollPane.setStyle("-fx-background: " + backgroundColor() + "; -fx-background-color: transparent;");
+        }
+
+        if (node instanceof Pane pane) {
+            for (Node child : pane.getChildren()) {
+                applyTheme(child);
+            }
+        } else if (node instanceof BorderPane borderPane) {
+            applyTheme(borderPane.getTop());
+            applyTheme(borderPane.getRight());
+            applyTheme(borderPane.getBottom());
+            applyTheme(borderPane.getLeft());
+            applyTheme(borderPane.getCenter());
+        } else if (node instanceof ScrollPane scrollPane) {
+            applyTheme(scrollPane.getContent());
+        } else if (node instanceof TabPane tabPane) {
+            for (Tab tab : tabPane.getTabs()) {
+                applyTheme(tab.getContent());
+            }
+        }
+    }
+
+    private static boolean hasCustomPanelStyle(Node node) {
+        String style = node.getStyle();
+        return style != null && (style.contains("-fx-border-color") || style.contains("-fx-background-radius"));
     }
 
     private static <T> TableColumn<T, Number> column(String title, double width) {

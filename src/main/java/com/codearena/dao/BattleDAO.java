@@ -251,6 +251,45 @@ public class BattleDAO extends BaseDAO<Battle> {
         }
     }
 
+    public int countCompletedByUserId(int userId) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM battles
+                WHERE (player1_id = ? OR player2_id = ?
+                   OR id IN (SELECT battle_id FROM battle_participants WHERE user_id = ?))
+                  AND UPPER(status) IN ('FINISHED', 'DRAW')
+                """;
+        return countByUser(sql, userId);
+    }
+
+    public int countCompletedRandomByUserId(int userId) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM battles
+                WHERE (player1_id = ? OR player2_id = ?
+                   OR id IN (SELECT battle_id FROM battle_participants WHERE user_id = ?))
+                  AND UPPER(status) IN ('FINISHED', 'DRAW')
+                  AND UPPER(battle_mode) = 'RANDOM_ONE_V_ONE'
+                """;
+        return countByUser(sql, userId);
+    }
+
+    private int countByUser(String sql, int userId) {
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, userId);
+                statement.setInt(2, userId);
+                statement.setInt(3, userId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? resultSet.getInt(1) : 0;
+                }
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to count battles.", exception);
+        }
+    }
+
     @Override
     public void save(Battle battle) {
         if (battle.getId() == 0) {

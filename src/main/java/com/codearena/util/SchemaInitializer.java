@@ -48,6 +48,8 @@ public final class SchemaInitializer {
         addTextColumnIfMissing(connection, "battles", "battle_mode");
         createBattleParticipantsIfMissing(connection);
         addTextColumnIfMissing(connection, "battle_participants", "ready_at");
+        createBadgesIfMissing(connection);
+        createUserBadgesIfMissing(connection);
     }
 
     private static void addTextColumnIfMissing(Connection connection, String tableName, String columnName) throws SQLException {
@@ -159,6 +161,43 @@ public final class SchemaInitializer {
                         joined_at TEXT    NOT NULL DEFAULT (datetime('now')),
                         ready_at  TEXT,
                         PRIMARY KEY (battle_id, user_id)
+                    )
+                    """);
+        }
+    }
+
+    private static void createBadgesIfMissing(Connection connection) throws SQLException {
+        if (tableExists(connection, "badges")) {
+            return;
+        }
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS badges (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        code        TEXT    NOT NULL UNIQUE,
+                        name        TEXT    NOT NULL,
+                        description TEXT    NOT NULL,
+                        category    TEXT    NOT NULL,
+                        image_path  TEXT,
+                        sort_order  INTEGER NOT NULL DEFAULT 0,
+                        is_active   INTEGER NOT NULL DEFAULT 1,
+                        created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+                    )
+                    """);
+        }
+    }
+
+    private static void createUserBadgesIfMissing(Connection connection) throws SQLException {
+        if (tableExists(connection, "user_badges")) {
+            return;
+        }
+        try (Statement statement = connection.createStatement()) {
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS user_badges (
+                        user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        badge_id  INTEGER NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
+                        earned_at TEXT    NOT NULL DEFAULT (datetime('now')),
+                        PRIMARY KEY (user_id, badge_id)
                     )
                     """);
         }

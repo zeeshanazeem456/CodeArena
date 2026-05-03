@@ -37,10 +37,12 @@ public class JudgeEngine {
             }
 
             int submissionId = submission.getId();
+            String language = normalizeLanguage(submission.getLanguage());
+            submission.setLanguage(language);
             Path directory = Sandbox.createTempDir(submissionId);
-            Sandbox.writeSourceFile(directory, submission.getCode());
+            Sandbox.writeSourceFile(directory, submission.getCode(), language);
 
-            Verdict compileVerdict = compile(directory);
+            Verdict compileVerdict = compile(directory, language);
             if (compileVerdict == Verdict.CE) {
                 lastResults = List.of(new TestCaseRunner.TestCaseResult(Verdict.CE, "", "Compilation failed.", "", 0));
                 submission.setVerdict(Verdict.CE);
@@ -58,7 +60,7 @@ public class JudgeEngine {
             List<TestCaseRunner.TestCaseResult> currentResults = new ArrayList<>();
 
             for (TestCase testCase : testCases) {
-                TestCaseRunner.TestCaseResult result = TestCaseRunner.run(testCase, directory);
+                TestCaseRunner.TestCaseResult result = TestCaseRunner.run(testCase, directory, language);
                 currentResults.add(result);
                 totalRuntimeMs += result.getRuntimeMs();
 
@@ -95,7 +97,10 @@ public class JudgeEngine {
         return List.copyOf(lastResults);
     }
 
-    private Verdict compile(Path directory) throws IOException, InterruptedException {
+    private Verdict compile(Path directory, String language) throws IOException, InterruptedException {
+        if ("Python".equalsIgnoreCase(language)) {
+            return Verdict.AC;
+        }
         ProcessBuilder processBuilder = new ProcessBuilder("javac", "Solution.java");
         processBuilder.directory(directory.toFile());
         processBuilder.redirectErrorStream(true);
@@ -118,6 +123,13 @@ public class JudgeEngine {
 
         join(outputDrainer);
         return process.exitValue() == 0 ? Verdict.AC : Verdict.CE;
+    }
+
+    private String normalizeLanguage(String language) {
+        if (language == null || language.isBlank()) {
+            return "Java";
+        }
+        return "Python".equalsIgnoreCase(language.trim()) ? "Python" : "Java";
     }
 
     private void join(Thread thread) {

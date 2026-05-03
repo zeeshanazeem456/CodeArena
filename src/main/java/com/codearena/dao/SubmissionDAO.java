@@ -197,6 +197,58 @@ public class SubmissionDAO extends BaseDAO<Submission> {
         return hasAccepted(userId, problemId);
     }
 
+    public int countAcceptedProblems(int userId) {
+        String sql = """
+                SELECT COUNT(DISTINCT problem_id)
+                FROM submissions
+                WHERE user_id = ? AND verdict = 'AC'
+                """;
+        return countByUser(sql, userId);
+    }
+
+    public int countAcceptedByDifficulty(int userId, String difficulty) {
+        String sql = """
+                SELECT COUNT(DISTINCT s.problem_id)
+                FROM submissions s
+                JOIN problems p ON p.id = s.problem_id
+                WHERE s.user_id = ? AND s.verdict = 'AC' AND p.difficulty = ?
+                """;
+
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, userId);
+                statement.setString(2, difficulty);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? resultSet.getInt(1) : 0;
+                }
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to count accepted submissions by difficulty.", exception);
+        }
+    }
+
+    public int countAcceptedByLanguage(int userId, String language) {
+        String sql = """
+                SELECT COUNT(DISTINCT problem_id)
+                FROM submissions
+                WHERE user_id = ? AND verdict = 'AC' AND UPPER(language) = UPPER(?)
+                """;
+
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, userId);
+                statement.setString(2, language);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? resultSet.getInt(1) : 0;
+                }
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to count accepted submissions by language.", exception);
+        }
+    }
+
     @Override
     public void delete(int id) {
         String sql = "DELETE FROM submissions WHERE id = ?";
@@ -223,6 +275,20 @@ public class SubmissionDAO extends BaseDAO<Submission> {
             }
         } catch (SQLException exception) {
             throw new DAOException("Failed to delete problem submissions.", exception);
+        }
+    }
+
+    private int countByUser(String sql, int userId) {
+        try {
+            Connection connection = DBConnection.getConnection();
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, userId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? resultSet.getInt(1) : 0;
+                }
+            }
+        } catch (SQLException exception) {
+            throw new DAOException("Failed to count submissions.", exception);
         }
     }
 

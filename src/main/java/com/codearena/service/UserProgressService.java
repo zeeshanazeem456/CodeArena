@@ -13,14 +13,20 @@ public class UserProgressService {
 
     private final UserDAO userDAO;
     private final SubmissionDAO submissionDAO;
+    private final BadgeService badgeService;
 
     public UserProgressService() {
-        this(new UserDAO(), new SubmissionDAO());
+        this(new UserDAO(), new SubmissionDAO(), new BadgeService());
     }
 
     public UserProgressService(UserDAO userDAO, SubmissionDAO submissionDAO) {
+        this(userDAO, submissionDAO, new BadgeService());
+    }
+
+    public UserProgressService(UserDAO userDAO, SubmissionDAO submissionDAO, BadgeService badgeService) {
         this.userDAO = userDAO;
         this.submissionDAO = submissionDAO;
+        this.badgeService = badgeService;
     }
 
     public void awardProblemSolved(User user, int problemId, Difficulty difficulty) {
@@ -63,6 +69,16 @@ public class UserProgressService {
                 );
             }
             refreshSession(winner.getId());
+            User refreshedWinner = userDAO.findById(winner.getId());
+            if (refreshedWinner != null) {
+                badgeService.checkBattleBadges(refreshedWinner);
+            }
+            if (loser != null) {
+                User refreshedLoser = userDAO.findById(loser.getId());
+                if (refreshedLoser != null) {
+                    badgeService.checkBattleBadges(refreshedLoser);
+                }
+            }
         } catch (Exception exception) {
             throw wrap(exception, "Failed to update battle progress.");
         }
