@@ -43,25 +43,8 @@ public class BadgeService {
                 return;
             }
             int userId = user.getId();
-            int accepted = submissionDAO.countAcceptedProblems(userId);
-            if (accepted >= 1) {
-                award(userId, "FIRST_SOLVE");
-            }
-            if (accepted >= 5) {
-                award(userId, "SOLVE_5");
-            }
-            if (accepted >= 25) {
-                award(userId, "SOLVE_25");
-            }
-            if (submissionDAO.countAcceptedByDifficulty(userId, "Hard") >= 1) {
-                award(userId, "FIRST_HARD");
-            }
-            if (submissionDAO.countAcceptedByLanguage(userId, "Java") >= 1) {
-                award(userId, "JAVA_SOLVER");
-            }
-            if (submissionDAO.countAcceptedByLanguage(userId, "Python") >= 1) {
-                award(userId, "PYTHON_SOLVER");
-            }
+            checkProblemBadges(userId);
+            checkXpBadges(user);
             checkStreakBadges(userId);
             checkBattleBadges(user);
         } catch (Exception exception) {
@@ -75,25 +58,8 @@ public class BadgeService {
                 return;
             }
             int userId = user.getId();
-            int accepted = submissionDAO.countAcceptedProblems(userId);
-            if (accepted >= 1) {
-                award(userId, "FIRST_SOLVE");
-            }
-            if (accepted >= 5) {
-                award(userId, "SOLVE_5");
-            }
-            if (accepted >= 25) {
-                award(userId, "SOLVE_25");
-            }
-            if (submissionDAO.countAcceptedByDifficulty(userId, "Hard") >= 1) {
-                award(userId, "FIRST_HARD");
-            }
-            if (submissionDAO.countAcceptedByLanguage(userId, "Java") >= 1) {
-                award(userId, "JAVA_SOLVER");
-            }
-            if (submissionDAO.countAcceptedByLanguage(userId, "Python") >= 1) {
-                award(userId, "PYTHON_SOLVER");
-            }
+            checkProblemBadges(userId);
+            checkXpBadges(userDAO.findById(userId));
             checkStreakBadges(userId);
         } catch (Exception exception) {
             throw wrap(exception, "Failed to update submission badges.");
@@ -108,6 +74,7 @@ public class BadgeService {
             int userId = user.getId();
             User refreshed = userDAO.findById(userId);
             int completedBattles = battleDAO.countCompletedByUserId(userId);
+            checkXpBadges(refreshed);
             if (completedBattles >= 1) {
                 award(userId, "FIRST_BATTLE");
             }
@@ -116,6 +83,12 @@ public class BadgeService {
             }
             if (refreshed != null && refreshed.getBattlesWon() >= 5) {
                 award(userId, "BATTLE_WINS_5");
+            }
+            if (refreshed != null && refreshed.getBattlesWon() >= 10) {
+                award(userId, "BATTLE_WINS_10");
+            }
+            if (completedBattles >= 25) {
+                award(userId, "BATTLES_25");
             }
             if (battleDAO.countCompletedRandomByUserId(userId) >= 10) {
                 award(userId, "RANDOM_BATTLES_10");
@@ -135,6 +108,72 @@ public class BadgeService {
         }
         if (refreshed.getStreakDays() >= 7) {
             award(userId, "STREAK_7");
+        }
+        if (refreshed.getStreakDays() >= 14) {
+            award(userId, "STREAK_14");
+        }
+    }
+
+    private void checkProblemBadges(int userId) {
+        int accepted = submissionDAO.countAcceptedProblems(userId);
+        if (accepted >= 1) {
+            award(userId, "FIRST_SOLVE");
+        }
+        if (accepted >= 5) {
+            award(userId, "SOLVE_5");
+        }
+        if (accepted >= 10) {
+            award(userId, "SOLVE_10");
+        }
+        if (accepted >= 25) {
+            award(userId, "SOLVE_25");
+        }
+        if (accepted >= 50) {
+            award(userId, "SOLVE_50");
+        }
+
+        int mediumAccepted = submissionDAO.countAcceptedByDifficulty(userId, "Medium");
+        if (mediumAccepted >= 1) {
+            award(userId, "FIRST_MEDIUM");
+        }
+        if (mediumAccepted >= 5) {
+            award(userId, "MEDIUM_5");
+        }
+
+        int hardAccepted = submissionDAO.countAcceptedByDifficulty(userId, "Hard");
+        if (hardAccepted >= 1) {
+            award(userId, "FIRST_HARD");
+        }
+        if (hardAccepted >= 5) {
+            award(userId, "HARD_5");
+        }
+
+        int javaAccepted = submissionDAO.countAcceptedByLanguage(userId, "Java");
+        if (javaAccepted >= 1) {
+            award(userId, "JAVA_SOLVER");
+        }
+        if (javaAccepted >= 5) {
+            award(userId, "JAVA_5");
+        }
+
+        int pythonAccepted = submissionDAO.countAcceptedByLanguage(userId, "Python");
+        if (pythonAccepted >= 1) {
+            award(userId, "PYTHON_SOLVER");
+        }
+        if (pythonAccepted >= 5) {
+            award(userId, "PYTHON_5");
+        }
+    }
+
+    private void checkXpBadges(User user) {
+        if (user == null) {
+            return;
+        }
+        if (user.getXp() >= 500) {
+            award(user.getId(), "XP_500");
+        }
+        if (user.getXp() >= 1000) {
+            award(user.getId(), "XP_1000");
         }
     }
 

@@ -1,0 +1,435 @@
+﻿[
+    {
+        "number":  1,
+        "name":  "Slide35",
+        "text":  [
+                     "Software Design and Analysis\u000bCS-3004\u000bLecture# 12",
+                     "Dr. Javaria Imtiaz\rAssistant Professor\rjavaria.imtiaz@nu.edu.pk"
+                 ],
+        "notes":  [
+                      "1"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_01.png"
+    },
+    {
+        "number":  2,
+        "name":  "Slide34",
+        "text":  [
+                     "Outline",
+                     "Package Diagram\rComponent Diagram\rDeployment Diagram\rActivity Diagram",
+                     "2"
+                 ],
+        "notes":  [
+                      "2"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_02.png"
+    },
+    {
+        "number":  3,
+        "name":  "Slide4",
+        "text":  [
+                     "Packages",
+                     "3"
+                 ],
+        "notes":  [
+                      "3"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_03.png"
+    },
+    {
+        "number":  4,
+        "name":  "Slide36",
+        "text":  [
+                     "Package",
+                     "Classes are basic structural units in an OO system\rIn large systems with hundreds of classes, need to group the classes together into packages\rA package in UML can be a collection of any packageable UML elements but it is most commonly a collection of classes\rA package may contain other packages (subpackages)\rA package in UML corresponds to a package in Java or a namespace in C++\rEach package is a namespace\rThere must never be more than one class within a package with any given name\rClasses in different packages can have the same name\rIf several teams working on project, each could work on a different package\rWould mean they don’t have to worry about name clashes\rTo distinguish between classes with the same name in different packages, use fully qualified name\re.g., java::util::Date, myPackage::Date\rUML package icon is a tabbed folder\rCan show just name or contents too\rIf just name shown, then can be written in the middle of the icon, otherwise name written on tab\rCan show all details of class or even class diagram within package\rAt other extreme, can just list names of classes within the package icon",
+                     "4"
+                 ],
+        "notes":  [
+                      "4"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_04.png"
+    },
+    {
+        "number":  5,
+        "name":  "Slide18",
+        "text":  [
+                     "Use Case Package Diagram:",
+                     "Use case Diagram ",
+                     "Use case Package  Diagram"
+                 ],
+        "notes":  [
+                      "5"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_05.png"
+    },
+    {
+        "number":  6,
+        "name":  "Slide19",
+        "text":  [
+                     "Use Case Package Diagram:"
+                 ],
+        "notes":  [
+                      "6"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_06.png"
+    },
+    {
+        "number":  7,
+        "name":  "Slide20",
+        "text":  [
+                     "Use Case Package Diagram:"
+                 ],
+        "notes":  [
+                      "7"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_07.png"
+    },
+    {
+        "number":  8,
+        "name":  "Slide21",
+        "text":  [
+                     "Class Package Diagram",
+                     "class Diagram       ",
+                     "class Package  Diagram"
+                 ],
+        "notes":  [
+                      "8"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_08.png"
+    },
+    {
+        "number":  9,
+        "name":  "Slide9",
+        "text":  [
+                     "Package membership",
+                     "These diagrams convey the same information",
+                     "9"
+                 ],
+        "notes":  [
+                      "9"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_09.png"
+    },
+    {
+        "number":  10,
+        "name":  "Slide5",
+        "text":  [
+                     "Class visibility and facades",
+                     "Classes inside a package can be public or private\rIndicate by preceding class name with + or -, respectively\rPublic class is part of package’s public interface\rCan be used by classes in other packages\rPrivate class is hidden within package\rCan only be used by other classes within the package\rCan control access to a package by making all classes private and then adding special, public façade classes that delegate public operations to the private classes within the package",
+                     "10"
+                 ],
+        "notes":  [
+                      "10"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_10.png"
+    },
+    {
+        "number":  11,
+        "name":  "Slide8",
+        "text":  [
+                     "Relationships between packages",
+                     "Element can refer to other elements that are in its own package and in enclosing packages without using fully qualified names.\rElement x must use fully qualified name to access element in package that does not contain x.\rfoo can be of class B or D \rfoo can be of class q::E or r::C",
+                     "11"
+                 ],
+        "notes":  [
+                      "11"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_11.png"
+    },
+    {
+        "number":  12,
+        "name":  "Slide6",
+        "text":  [
+                     "Packages and dependencies",
+                     "Package diagram shows packages and their dependencies\rPackage A depends on package B if A contains a class which depends on a class in B.\rInter-package dependencies summarise dependencies between classes",
+                     "12"
+                 ],
+        "notes":  [
+                      "12"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_12.png"
+    },
+    {
+        "number":  13,
+        "name":  "Slide37",
+        "text":  [
+                     "Package import",
+                     "Element import identifies an element in another package and allows the element to be referenced using its name without a qualifier\rElement import indicated by dashed arrow with open arrowhead from importing package to imported element and labelling arrow with\rKeyword \u003c\u003cimport\u003e\u003e, if visibility of imported element within importing package is public and\rKeyword \u003c\u003caccess\u003e\u003e, if visibility of imported element within importing package is private",
+                     "13",
+                     "Access: Indicates that one package requires assistance from the functions of another package. \r\rImport: Indicates that functionality has been imported from one package to another."
+                 ],
+        "notes":  [
+                      "13"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_13.png"
+    },
+    {
+        "number":  14,
+        "name":  "Slide7",
+        "text":  [
+                     "Element import",
+                     "14",
+                     "In above example\r\rClass b::C is referred to as just C in package a, and has public visibility within package a\rImported class C hides outer class e::C which must be referred to by its fully qualified name (before import, C referred to e::C in package a)\rClass b::F is imported into package a, but there is already a class called F in a, therefore cannot import b::F without aliasing it\rClass b::F is referred to as G in package a\rImported class b::D can be referred to as D in package a, and has private visibility within package a\rPackage h imports package a which means that, in h, b::C is referred to as C and b::F is referred to as G\rb::D is not accessible from h because its visibility in a is private"
+                 ],
+        "notes":  [
+                      "14"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_14.png"
+    },
+    {
+        "number":  15,
+        "name":  "Slide10",
+        "text":  [
+                     "Package import",
+                     "A package import is a directed relationship  that identifies a package whose members are to be imported by a namespace (package)\rImporting namespace adds names of members of imported package to its namespace\rConceptually equivalent to having an element import to each individual member of the imported namespace\rNotated using dashed line with open arrowhead from importing namespace to imported package, labelled with keyword\r\u003c\u003cimport\u003e\u003e if package import is public and\r\u003c\u003caccess\u003e\u003e if package import is private\rIf package import is public, then imported elements will be visible outside of importing package, while if it is private, they will not be visible\rIn example above, elements in types are imported to shoppingCart and then further imported to webShop\rBut elements of auxiliary only accessible from shoppingCart, not webShop",
+                     "15"
+                 ],
+        "notes":  [
+                      "15"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_15.png"
+    },
+    {
+        "number":  16,
+        "name":  "Slide11",
+        "text":  [
+                     "Components",
+                     "UML defines a component to be \r“a modular unit with well-defined interfaces that is replaceable within its environment” (UML Superstructure Specification, v.2.0, Chapter 8)\rComponent-based design emphasises reuse\rComponent is an autonomous unit within a system\rComponent defines its behaviour in terms of provided and required interfaces\rA component may be replaced with another if they both provide and require the same interfaces\rIn UML, a component is a special type of class\rHowever, a component will often be a collection of collaborating classes\rA component can therefore have attributes and operations and may participate in associations and generalizations\rA component provides interfaces that it realizes and exposes to its environment\rA component may require interfaces from other components in its environment in order to be able to provide all its functionality\rExternal or “Black box” view on a component considers its publicly visible properties and operations\rInternal or “White box” view on a component considers its private properties and realizing classifiers (i.e., the classes and other elements inside the component) and shows how the behaviour of the component is realized internally",
+                     "16"
+                 ],
+        "notes":  [
+                      "16"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_16.png"
+    },
+    {
+        "number":  17,
+        "name":  "Slide38",
+        "text":  [
+                     "17"
+                 ],
+        "notes":  [
+                      "17"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_17.png"
+    },
+    {
+        "number":  18,
+        "name":  "Slide12",
+        "text":  [
+                     "Component notation",
+                     "Component icon is a class icon with the keyword \u003c\u003ccomponent\u003e\u003e\rOptionally can include a component icon in the top, right-hand corner\r\rBlack-box view shows only interfaces provided and required either using “ball-and-socket” notation or listed in a compartment of the component rectangle",
+                     "18"
+                 ],
+        "notes":  [
+                      "18"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_18.png"
+    },
+    {
+        "number":  19,
+        "name":  "Slide13",
+        "text":  [
+                     "Internal, white-box view on components",
+                     "Interfaces can also be displayed in full using class icons, use \rDashed arrow with white triangle head for provided interfaces and\rDashed arrow with open arrowhead with keyword \u003c\u003cuse\u003e\u003e for required interfaces",
+                     "19"
+                 ],
+        "notes":  [
+                      "19"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_19.png"
+    },
+    {
+        "number":  20,
+        "name":  "Slide14",
+        "text":  [
+                     "Artifacts",
+                     "An artifact is a concrete element in the physical world\rAn artifact is the specification of a physical piece of information such as a binary executable, a database table or an implemented component such as a DLL or a Java class file\rEach artifact has a filename\rAn artifact is represented by a normal class rectangle with the keyword \u003c\u003cartifact\u003e\u003e or an artifact icon in the top right corner\rName of artifact may (optionally) be underlined\rArtifact is said to manifest model elements that are used to construct the artifact\rManifestation indicated by dependency arrow with keyword \u003c\u003cmanifest\u003e\u003e",
+                     "20"
+                 ],
+        "notes":  [
+                      "20"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_20.png"
+    },
+    {
+        "number":  21,
+        "name":  "Slide23",
+        "text":  [
+                     "21",
+                     "Component Diagram – another example\u000b(www.cs.tut.fi/tapahtumat/olio2004/richardson.pdf)"
+                 ],
+        "notes":  [
+                      "21"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_21.png"
+    },
+    {
+        "number":  22,
+        "name":  "Slide24",
+        "text":  [
+                     "Component Diagram – another example\u000b(www.cs.tut.fi/tapahtumat/olio2004/richardson.pdf)",
+                     "22"
+                 ],
+        "notes":  [
+                      "22"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_22.png"
+    },
+    {
+        "number":  23,
+        "name":  "Slide22",
+        "text":  [
+                     "What is a Deployment Diagram?",
+                     "Deployment Diagram – a diagram that shows the physical relationships among software and hardware components in a system\rComponents – physical modules of code\rConnections – show communication paths\rDependencies – show how components communicate with other components\rNodes – computational units, usually a pieces of hardware",
+                     "23",
+                     "A deployment diagram is a UML diagram type that shows the execution architecture of a system, including nodes such as hardware or software execution environments, and the middleware connecting them."
+                 ],
+        "notes":  [
+                      "23"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_23.png"
+    },
+    {
+        "number":  24,
+        "name":  "Slide30",
+        "text":  [
+                     "A deployment diagram is a UML diagram type that shows the execution architecture of a system, including nodes such as hardware or software execution environments, and the middleware connecting them.\r\rDeployment diagrams are typically used to visualize the physical hardware and software of a system. \r\rThe term Deployment itself describes the purpose of the diagram. Deployment diagrams are used for describing the hardware components, where software components are deployed. Component diagrams and deployment diagrams are closely related.",
+                     "24"
+                 ],
+        "notes":  [
+                      "24"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_24.png"
+    },
+    {
+        "number":  25,
+        "name":  "Slide31",
+        "text":  [
+                     "Purpose",
+                     "Component diagrams are used to describe the components and deployment diagrams shows how they are deployed in hardware.\r\rUML is mainly designed to focus on the software artifacts of a system. However, these two diagrams are special diagrams used to focus on software and hardware components.\r\rMost of the UML diagrams are used to handle logical components but deployment diagrams are made to focus on the hardware topology of a system. Deployment diagrams are used by the system engineers.",
+                     "25"
+                 ],
+        "notes":  [
+                      "25"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_25.png"
+    },
+    {
+        "number":  26,
+        "name":  "Slide32",
+        "text":  [
+                     "The purpose of deployment diagrams can be described as −\rVisualize the hardware topology of a system.\rDescribe the hardware components used to deploy software components.\rDescribe the runtime processing nodes.",
+                     "26"
+                 ],
+        "notes":  [
+                      "26"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_26.png"
+    },
+    {
+        "number":  27,
+        "name":  "Slide39",
+        "text":  [
+                     "27"
+                 ],
+        "notes":  [
+                      "27"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_27.png"
+    },
+    {
+        "number":  28,
+        "name":  "Slide15",
+        "text":  [
+                     "The physical layer",
+                     "Deployment diagram shows\rThe physical communication links between hardware items (nodes) (e.g., pcs, printers)\rThe relationships between physical devices (nodes) and processes (artifacts)\rPhysical layer consists of the machines, represented by nodes, and the (physical) connections between them (e.g., cables), represented by associations\rNodes have node types",
+                     "28"
+                 ],
+        "notes":  [
+                      "28"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_28.png"
+    },
+    {
+        "number":  29,
+        "name":  "Slide16",
+        "text":  [
+                     "Deploying the software artifacts on the hardware nodes",
+                     "Artifact shown inside a node to show that it runs on the node\rIf an artifact depends on another artifact then there must be a physical link between the nodes on which they are deployed",
+                     "29"
+                 ],
+        "notes":  [
+                      "29"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_29.png"
+    },
+    {
+        "number":  30,
+        "name":  "Slide25",
+        "text":  [
+                     "Deployment Diagram",
+                     "30",
+                     "J2EE Server",
+                     "Membership Server",
+                     "IIS + PhP Server",
+                     "Tomcat Server",
+                     "TCP/IP",
+                     "TCP/IP",
+                     "DecNet",
+                     "Shows a set of processing nodes and their relationships.\rRepresents the static deployment view of an architecture.\rNodes typically enclose one or more components."
+                 ],
+        "notes":  [
+                      "30"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_30.png"
+    },
+    {
+        "number":  31,
+        "name":  "Slide26",
+        "text":  [
+                     "Structural Diagrams - Deployment Diagram\u000b(http://www.agilemodeling.com/artifacts/deploymentDiagram.htm)",
+                     "31",
+                     "Student administration application\r\rPhysical nodes - stereotype device\rWebServer - physical device or software artifact \rRMI/message bus: connection type \rNodes can contain other nodes or software artifacts recursively  \rDeployment specs: configuration files: name and properties"
+                 ],
+        "notes":  [
+                      "31"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_31.png"
+    },
+    {
+        "number":  32,
+        "name":  "Slide27",
+        "text":  [
+                     "Activity Diagrams",
+                     "Fancy flowchart\rDisplays the flow of activities involved in a single process \rStates \rDescribe what is being processed\rIndicated by boxes with rounded corners\rSwim lanes\rIndicates which object is responsible for what activity\rBranch\rTransition that branch\rIndicated by a diamond\rFork\rTransition forking into parallel activities\rIndicated by solid bars\rStart and End"
+                 ],
+        "notes":  [
+                      "32"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_32.png"
+    },
+    {
+        "number":  33,
+        "name":  "Slide28",
+        "text":  [
+                     "Sample Activity Diagram",
+                     "Ordering System\rMay need multiple diagrams from other points of view"
+                 ],
+        "notes":  [
+                      "33"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_33.png"
+    },
+    {
+        "number":  34,
+        "name":  "Slide29",
+        "text":  [
+                     "Activity Diagram Example"
+                 ],
+        "notes":  [
+                      "34"
+                  ],
+        "image":  "D:\\CodeArena\\.codex_tmp\\uml_deck_extract\\slides_png\\slide_34.png"
+    }
+]

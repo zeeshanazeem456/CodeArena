@@ -1,0 +1,1305 @@
+CodeArena Demo Technical Walkthrough
+====================================
+
+Purpose
+-------
+This file explains CodeArena from the first login screen to problem execution,
+the judge system, and the other major parts of the project. You can use it as
+demo speaking notes and as a technical explanation of how the application was
+implemented.
+
+
+1. Overall Architecture
+-----------------------
+CodeArena is a local Java desktop application. It is built with Java 17,
+JavaFX 21, Maven, and SQLite. It does not use a web server, REST API, Spring
+Boot, HTML, or a browser-based frontend.
+
+The code is divided into packages:
+
+com.codearena
+    Contains MainApp.java, the JavaFX application entry point.
+
+com.codearena.ui
+    Contains ScreenFactory.java. This is where the JavaFX screens are created:
+    login, register, dashboard, problem list, code editor, profile, battles,
+    squad, leaderboard, admin panel, dialogs, charts, tables, and theme logic.
+
+com.codearena.service
+    Contains the business logic. Services sit between the UI and database
+    layer. For example, AuthService handles login/register logic, ProblemService
+    handles problem filtering, JudgeService runs the judge asynchronously, and
+    AdminService handles admin operations.
+
+com.codearena.dao
+    Contains the data access layer. DAO classes execute SQL queries against the
+    SQLite database. For example, UserDAO reads/writes users, ProblemDAO handles
+    problems, SubmissionDAO handles submissions, and TestCaseDAO handles test
+    cases.
+
+com.codearena.model
+    Contains simple Java model classes that represent domain objects such as
+    User, Problem, Submission, TestCase, Battle, Badge, and Squad.
+
+com.codearena.judge
+    Contains the local judge system. JudgeEngine controls the judging process,
+    TestCaseRunner executes one test case, Sandbox creates/deletes temporary
+    code folders, PythonRuntime locates Python, and Verdict represents AC, WA,
+    CE, RE, and TLE.
+
+com.codearena.util
+    Contains helper classes such as DBConnection, SchemaInitializer,
+    SeedInitializer, PersistenceHandler, SessionManager, NavigationUtil,
+    XPCalculator, and custom exception classes.
+
+The main layered flow is:
+
+UI screen -> Service class -> DAO class -> SQLite database
+
+For submissions, the flow becomes:
+
+Code editor UI -> JudgeService -> JudgeEngine -> Sandbox/TestCaseRunner
+              -> SubmissionDAO/UserProgressService/BadgeService
+
+
+2. Application Startup
+----------------------
+The application starts from:
+
+    src/main/java/com/codearena/MainApp.java
+
+MainApp extends javafx.application.Application. JavaFX calls the start(Stage)
+method when the program launches.
+
+MainApp does these things:
+
+1. Calls PersistenceHandler.initialize().
+2. Creates the first Scene using ScreenFactory.create("login").
+3. Sets the window title to CodeArena.
+4. Sets minimum window size.
+5. Loads the application icon from /images/logo-mark.png.
+6. Shows the startup splash screen.
+7. When the application closes, stop() calls PersistenceHandler.shutdown().
+
+PersistenceHandler is responsible for preparing the database. It uses:
+
+    DBConnection
+    SchemaInitializer
+    SeedInitializer
+
+DBConnection opens the SQLite database. By default, the database is:
+
+    data/codearena.db
+
+SchemaInitializer reads:
+
+    src/main/resources/data/schema.sql
+
+and creates missing tables.
+
+SeedInitializer reads:
+
+    src/main/resources/data/seed.sql
+
+and inserts demo users, problems, test cases, badges, and other seed content.
+
+This means a fresh install can recreate the database structure from the schema
+and seed resources.
+
+
+3. Login Flow
+-------------
+The login screen is created in:
+
+    ScreenFactory.login()
+
+Main classes involved:
+
+    ScreenFactory
+    AuthService
+    UserDAO
+    SessionManager
+    NavigationUtil
+    User
+
+How it works:
+
+1. ScreenFactory.login() builds the JavaFX controls:
+   username field, password field, login button, register link, guest problem
+   browsing button, public leaderboard button, and theme toggle.
+
+2. When the user clicks Login, the UI calls:
+
+       AuthService.login(username, password)
+
+3. AuthService checks:
+   - username is not blank
+   - password is not blank
+   - user exists
+   - password matches the stored BCrypt hash
+   - account is active
+
+4. AuthService uses UserDAO.findByUsername(username) to load the user from
+   SQLite.
+
+5. Password verification is done with:
+
+       BCrypt.checkpw(password, user.getPassword())
+
+6. If the login is successful, ScreenFactory stores the user with:
+
+       SessionManager.setCurrentUser(user)
+
+7. Then the UI checks the role:
+   - ADMIN users go to the admin panel.
+   - CODER users go to the coder dashboard.
+
+8. Navigation is done through:
+
+       NavigationUtil.navigateTo("dashboard", button)
+       NavigationUtil.navigateTo("admin-panel", button)
+
+SessionManager is important because it keeps track of who is currently logged
+in. Many screens check SessionManager.isLoggedIn() before allowing access.
+
+
+4. Registration Flow
+--------------------
+The register screen is created in:
+
+    ScreenFactory.register()
+
+Main classes involved:
+
+    ScreenFactory
+    AuthService
+    UserDAO
+    User
+    BCrypt
+
+How it works:
+
+1. User enters username, email, and password.
+2. ScreenFactory calls AuthService.register().
+3. AuthService validates:
+   - username is required
+   - email is required
+   - password is required
+   - password length must be at least 8 characters
+   - username must not already exist
+4. Password is hashed with:
+
+       BCrypt.hashpw(password, BCrypt.gensalt())
+
+5. A User object is created with role CODER.
+6. UserDAO.register(user) inserts the user into SQLite.
+
+This keeps password storage safer because plain passwords are not stored in the
+database.
+
+
+5. Dashboard and Navigation
+---------------------------
+The coder dashboard is created in:
+
+    ScreenFactory.dashboard()
+
+Main classes involved:
+
+    ScreenFactory
+    SessionManager
+    NavigationUtil
+    UserDAO / ProfileService-style user loading
+    LeaderboardService
+    XPCalculator
+
+The dashboard shows the logged-in user's:
+
+    username
+    rank
+    XP
+    solved problem count
+    battle record
+    streak
+    top coders
+    quick navigation buttons
+
+Most logged-in screens use the shared app shell/sidebar built inside
+ScreenFactory. The sidebar contains navigation buttons such as:
+
+    Dashboard
+    Problems
+    Leaderboard
+    Battle
+    Squad
+    Profile
+    Admin Panel, for admins
+    About
+    Theme toggle
+
+Navigation is centralized in NavigationUtil. When a button is clicked,
+NavigationUtil replaces the current Scene with a new Scene created by
+ScreenFactory.create(screenName).
+
+This design keeps screen creation in one place and avoids every screen manually
+managing its own Stage.
+
+
+6. Problem List
+---------------
+The problem list screen is created in:
+
+    ScreenFactory.problemList()
+
+Main classes involved:
+
+    ScreenFactory
+    ProblemService
+    ProblemDAO
+    SubmissionDAO
+    Problem
+    SessionManager
+
+How it works:
+
+1. ScreenFactory creates filters for search, difficulty, and category/tag.
+2. It calls ProblemService.getFilteredProblems().
+3. ProblemService uses ProblemDAO to load matching published problems.
+4. If a user is logged in, solved status can be checked through:
+
+       ProblemService.isSolvedByUser(problemId, userId)
+
+5. That method uses SubmissionDAO to check whether an accepted submission exists
+   for that user and problem.
+6. Clicking a problem stores it in ScreenFactory.selectedProblem.
+7. The app navigates to the problem detail screen.
+
+ProblemService protects the UI from direct SQL details. The UI asks for
+problems, and the service decides which DAO queries are needed.
+
+
+7. Problem Detail Screen
+------------------------
+The problem detail screen is created in:
+
+    ScreenFactory.problemDetail()
+
+Main classes involved:
+
+    ScreenFactory
+    ProblemService
+    TestCaseDAO
+    Problem
+    TestCase
+
+This screen displays:
+
+    problem title
+    difficulty
+    description
+    constraints
+    input format
+    output format
+    sample test cases
+    acceptance rate
+
+ProblemService.getSampleTestCases(problemId) loads only sample test cases.
+The hidden test cases are not shown to the user but are used by the full judge
+when the user submits.
+
+If the user is logged in, the screen shows a Solve/Code button. If the user is
+a guest, the screen can show limited browsing behavior and ask for login before
+submission.
+
+
+8. Code Editor and Submission Creation
+--------------------------------------
+The code editor screen is created in:
+
+    ScreenFactory.codeEditor()
+
+Main classes involved:
+
+    ScreenFactory
+    JudgeService
+    ProblemService
+    UserProgressService
+    BadgeService
+    Submission
+    SessionManager
+
+The editor screen lets the user:
+
+    choose Java or Python
+    write code
+    run sample tests
+    submit against all tests
+    see verdict and detailed test output
+
+ScreenFactory stores code templates:
+
+    TEMPLATE          Java starter code
+    PYTHON_TEMPLATE   Python starter code
+
+When the user changes language, the editor template changes.
+
+When the user clicks Run or Submit, ScreenFactory calls runJudge().
+
+runJudge() does this:
+
+1. Checks that a problem is selected.
+2. Checks that a user is logged in.
+3. Creates a Submission object using buildSubmission().
+4. Sets:
+   - userId
+   - problemId
+   - source code
+   - language
+5. Calls JudgeService.evaluateReportAsync().
+
+There are two modes:
+
+Run:
+    sampleOnly = true
+    Uses only sample test cases.
+    Does not permanently save the submission as a real attempt.
+
+Submit:
+    sampleOnly = false
+    Uses all test cases.
+    Saves the submission and updates progress if accepted.
+
+
+9. JudgeService: Keeping the UI Responsive
+------------------------------------------
+JudgeService is located at:
+
+    src/main/java/com/codearena/service/JudgeService.java
+
+Main classes involved:
+
+    JudgeService
+    JudgeEngine
+    javafx.concurrent.Task
+    Platform.runLater()
+
+JudgeService exists because judging code can take time. If judging ran directly
+on the JavaFX UI thread, the whole application could freeze.
+
+JudgeService creates a JavaFX Task and runs it on a daemon worker thread:
+
+    Thread worker = new Thread(judgeTask, "judge-service-worker")
+    worker.setDaemon(true)
+    worker.start()
+
+When the judge finishes, JudgeService returns results back to the UI using
+Platform.runLater(). This is important because JavaFX UI components should only
+be updated on the JavaFX Application Thread.
+
+JudgeService returns a JudgeReport containing:
+
+    final Verdict
+    list of TestCaseRunner.TestCaseResult objects
+
+Each test result contains:
+
+    verdict
+    input
+    actual output
+    expected output
+    runtime in milliseconds
+
+
+10. JudgeEngine: Main Judging Process
+-------------------------------------
+JudgeEngine is located at:
+
+    src/main/java/com/codearena/judge/JudgeEngine.java
+
+Main classes involved:
+
+    JudgeEngine
+    TestCaseDAO
+    SubmissionDAO
+    Sandbox
+    TestCaseRunner
+    PythonRuntime
+    Verdict
+
+JudgeEngine.runSubmission(submission, sampleOnly) is the main judge method.
+
+Step by step:
+
+1. Save or prepare the submission.
+
+   For full submissions, if the submission has no id yet, SubmissionDAO saves
+   it first. For sample-only runs, JudgeEngine creates a temporary id.
+
+2. Normalize the language.
+
+   If the language is Python, it stays Python. Otherwise, it defaults to Java.
+
+3. Create a temporary sandbox folder.
+
+   Sandbox.createTempDir(submissionId) creates a folder under the OS temp
+   directory:
+
+       temp/codearena/{submissionId}
+
+4. Write the source code file.
+
+   Java source is written as:
+
+       Solution.java
+
+   Python source is written as:
+
+       solution.py
+
+5. Compile or check syntax.
+
+   Java:
+       javac Solution.java
+
+   Python:
+       python -m py_compile solution.py
+
+   PythonRuntime checks possible Python commands:
+
+       python
+       python3
+       py -3
+
+6. If compilation fails, verdict becomes CE.
+
+7. Load test cases.
+
+   sampleOnly = true:
+       TestCaseDAO.getSampleByProblemId(problemId)
+
+   sampleOnly = false:
+       TestCaseDAO.getByProblemId(problemId)
+
+8. Run every test case using TestCaseRunner.run().
+
+9. Choose the final verdict.
+
+   JudgeEngine starts with AC. If a test returns WA, RE, TLE, or CE, it updates
+   the overall verdict based on Verdict.priority().
+
+10. Stop early on terminal verdicts.
+
+    Some verdicts are terminal, so the judge can stop running more tests.
+
+11. Save final verdict and runtime for full submissions.
+
+12. Always clean the sandbox in the finally block.
+
+This cleanup is important because user source files and compiled class files
+should not remain in the temp directory.
+
+
+11. TestCaseRunner: Running One Test Case
+-----------------------------------------
+TestCaseRunner is located at:
+
+    src/main/java/com/codearena/judge/TestCaseRunner.java
+
+Main classes involved:
+
+    TestCaseRunner
+    ProcessBuilder
+    TestCase
+    Verdict
+
+TestCaseRunner.run(testCase, workingDir, language) executes one compiled
+program against one input.
+
+How it works:
+
+1. Builds the run command.
+
+   Java:
+       java -cp . Solution
+
+   Python:
+       python solution.py
+
+2. Starts the process using ProcessBuilder.
+
+3. Writes the test case input to the process stdin.
+
+4. Reads stdout and stderr using separate reader threads.
+
+5. Waits up to 5 seconds.
+
+6. If the program does not finish in time:
+
+       process.destroyForcibly()
+       verdict = TLE
+
+7. If the process exits with a non-zero exit code:
+
+       verdict = RE
+
+8. If the process exits normally:
+
+       actual output is compared with expected output
+
+9. Output comparison normalizes line endings and trims whitespace:
+
+       \r\n and \r become \n
+       leading/trailing whitespace is ignored
+
+10. If normalized output matches expected output:
+
+       verdict = AC
+
+    Otherwise:
+
+       verdict = WA
+
+
+12. Verdict System
+------------------
+Verdict is an enum in:
+
+    src/main/java/com/codearena/judge/Verdict.java
+
+Main verdicts:
+
+AC
+    Accepted. Output matches expected output.
+
+WA
+    Wrong Answer. Program ran, but output was incorrect.
+
+CE
+    Compilation Error. Java compilation or Python syntax check failed.
+
+RE
+    Runtime Error. Program crashed or judge hit an execution exception.
+
+TLE
+    Time Limit Exceeded. Program ran longer than allowed.
+
+Verdict also stores:
+
+    priority
+    display name
+    display color
+    terminal status
+
+Priority helps JudgeEngine decide which verdict should become the final verdict
+when multiple test cases are involved.
+
+
+13. Saving Submissions
+----------------------
+Submissions are represented by:
+
+    src/main/java/com/codearena/model/Submission.java
+
+They are saved using:
+
+    src/main/java/com/codearena/dao/SubmissionDAO.java
+
+A submission stores:
+
+    id
+    user_id
+    problem_id
+    source code
+    language
+    verdict
+    runtime_ms
+    battle_id, if it belongs to a battle
+    submitted_at
+
+The submissions table in SQLite is defined in schema.sql.
+
+SubmissionDAO supports operations such as:
+
+    save submission
+    find submissions by user
+    find submissions by problem
+    find all submissions for admin
+    count today's submissions
+    verdict breakdown
+    check accepted submission
+    count accepted problems
+    count accepted by difficulty
+    count accepted by language
+    delete submissions
+
+
+14. Progress, XP, Rank, and Streaks
+-----------------------------------
+Progress is handled mainly by:
+
+    UserProgressService
+    XPCalculator
+    UserDAO
+    SessionManager
+
+When a user submits a full solution and gets AC, ScreenFactory checks whether
+the problem was already solved:
+
+    ProblemService.isSolvedByUser(problemId, userId)
+
+If it was not already solved, ScreenFactory calls:
+
+    UserProgressService.awardProblemSolved(user, problemId, difficulty, alreadySolved)
+
+UserProgressService then:
+
+1. Adds XP based on difficulty.
+2. Increments problems solved.
+3. Updates streak days.
+4. Calculates rank title using XPCalculator.
+5. Saves progress with UserDAO.updateProgress().
+6. Refreshes the current session user.
+
+For battle wins, UserProgressService.awardBattleWin() updates:
+
+    winner XP
+    winner rank
+    winner battle wins
+    loser battle losses
+
+The updated user is loaded again from the database so the UI can show fresh
+data.
+
+
+15. Badges and Achievements
+---------------------------
+Badges are handled by:
+
+    BadgeService
+    BadgeDAO
+    SubmissionDAO
+    BattleDAO
+    UserDAO
+
+Badge data is stored in two tables:
+
+badges
+    Stores all possible badge definitions, names, descriptions, categories,
+    image paths, and sort order.
+
+user_badges
+    Stores which user has earned which badge.
+
+BadgeService checks milestones such as:
+
+Problem badges:
+    FIRST_SOLVE
+    SOLVE_5
+    SOLVE_10
+    SOLVE_25
+    SOLVE_50
+
+Difficulty badges:
+    FIRST_MEDIUM
+    MEDIUM_5
+    FIRST_HARD
+    HARD_5
+
+Language badges:
+    JAVA_SOLVER
+    JAVA_5
+    PYTHON_SOLVER
+    PYTHON_5
+
+Battle badges:
+    FIRST_BATTLE
+    FIRST_BATTLE_WIN
+    BATTLE_WINS_5
+    BATTLE_WINS_10
+    BATTLES_25
+    RANDOM_BATTLES_10
+
+Progress badges:
+    STREAK_3
+    STREAK_7
+    STREAK_14
+    XP_500
+    XP_1000
+
+When a user opens the profile, ProfileService calls BadgeService to sync and
+load badges. This makes sure earned badges are up to date even if some were
+earned before the profile screen opened.
+
+
+16. Profile Screen
+------------------
+The profile screen is created in:
+
+    ScreenFactory.profile()
+
+Main classes involved:
+
+    ScreenFactory
+    ProfileService
+    BadgeService
+    SubmissionDAO
+    BattleDAO
+    UserDAO
+    ProblemDAO
+
+The profile screen has major sections:
+
+Performance
+    Shows verdict distribution, language usage, battle results, and history
+    tables.
+
+Achievements
+    Shows earned badges and total badges.
+
+Edit
+    Allows username/email update and optional password update.
+
+ProfileService loads:
+
+    current user
+    submission history
+    battle history
+    badges
+    problem titles
+    opponent names
+    battle outcomes
+
+Charts are built in JavaFX inside ScreenFactory using PieChart and BarChart.
+Tables are built with TableView and wrapped in bounded scroll areas so long
+lists do not break the layout.
+
+
+17. Leaderboard
+---------------
+The leaderboard screen is created in:
+
+    ScreenFactory.leaderboard()
+
+Main classes involved:
+
+    ScreenFactory
+    LeaderboardService
+    UserDAO
+    User
+
+LeaderboardService calls:
+
+    UserDAO.getAllRanked()
+
+The DAO returns users ordered by ranking information such as XP, solved
+problems, and battle performance.
+
+The public leaderboard can be viewed without logging in. Logged-in users can
+also access it from the sidebar.
+
+
+18. Battle System
+-----------------
+Battle logic is handled by:
+
+    BattleService
+    BattleDAO
+    UserDAO
+    ProblemDAO
+    UserProgressService
+    JudgeService
+
+Battle screens are created in ScreenFactory:
+
+    battleLobby()
+    battleOneVsOne()
+    battleFreeForAll()
+    battleRandomOneVsOne()
+    battleArena()
+
+Supported battle modes:
+
+ONE_V_ONE
+    A direct two-player battle.
+
+FREE_FOR_ALL
+    Multiple players join the same room.
+
+RANDOM_ONE_V_ONE
+    The app tries to match a user with another waiting player.
+
+Battle flow:
+
+1. User chooses battle mode and difficulty.
+2. BattleService selects a random published problem with matching difficulty.
+3. A Battle object is created and saved.
+4. For room-based battles, BattleService creates a join code.
+5. Another player joins using the join code.
+6. Players become battle participants.
+7. When ready, battle status becomes ACTIVE.
+8. The battle arena opens with the selected problem and timer.
+9. The user submits code through the same JudgeService/JudgeEngine system.
+10. If a participant gets AC, BattleService.finishWithWinner() can finish the
+    battle.
+11. UserProgressService awards battle XP and updates win/loss stats.
+12. If time expires, BattleService.finishAsDraw() marks the battle as DRAW.
+
+The battle system reuses the normal judge system instead of having a separate
+judge. That keeps problem solving behavior consistent across normal practice
+and battle mode.
+
+
+19. Squad System
+----------------
+Squads are handled by:
+
+    SquadService
+    SquadDAO
+    UserDAO
+    Squad
+    User
+
+The squad screen is created in:
+
+    ScreenFactory.squad()
+
+Squad features:
+
+    create a squad
+    join a squad by name
+    view squad members
+    remove members if leader
+    view squad leaderboard
+    calculate combined squad XP
+
+SquadService rules:
+
+1. A user must be logged in.
+2. A user cannot create a squad if already in a squad.
+3. Squad name is required.
+4. Squad name must be unique.
+5. Only a squad leader can remove members.
+6. A leader cannot remove themselves through removeMember().
+
+The user table stores squad_id, which connects a user to a squad.
+
+
+20. Admin Panel
+---------------
+The admin panel is created in:
+
+    ScreenFactory.adminPanel()
+
+Main classes involved:
+
+    ScreenFactory
+    AdminService
+    AnalyticsService
+    UserDAO
+    ProblemDAO
+    TestCaseDAO
+    SubmissionDAO
+
+Access control:
+
+    ScreenFactory.adminPanel() checks SessionManager.getCurrentUser().
+    If the user is not ADMIN, access is blocked.
+
+Admin tabs:
+
+Users
+    View users and ban/unban accounts.
+
+Problems
+    Create, edit, publish/unpublish, and delete problems.
+
+Submissions
+    View all submissions, open submitted code, and delete submissions.
+
+Analytics
+    View total users, today's submissions, verdict breakdown, and problem
+    success rates.
+
+AdminService validates problem data:
+
+    title is required
+    description/problem statement is required
+    difficulty is required
+    at least one test case is required before saving ready problems
+    test case input is required
+    expected output is required
+    sequence number must be at least 1
+
+Deleting a problem:
+
+1. AdminService deletes submissions for the problem.
+2. Deletes test cases for the problem.
+3. Deletes the problem.
+
+This prevents dangling data.
+
+
+21. Analytics
+-------------
+Analytics are handled by:
+
+    AnalyticsService
+    UserDAO
+    SubmissionDAO
+    ProblemDAO
+
+AnalyticsService can calculate:
+
+    total users
+    submissions today
+    verdict breakdown
+    problem success/acceptance rates
+
+This information is shown in the admin panel.
+
+
+22. Database Design
+-------------------
+The database schema is in:
+
+    src/main/resources/data/schema.sql
+
+Main tables:
+
+users
+    Stores accounts, password hashes, role, XP, rank, solved count, battle
+    stats, streak, active status, and squad id.
+
+problems
+    Stores problem statement, difficulty, category, tags, constraints, input
+    format, output format, time limit, memory limit, publish status, and creator.
+
+test_cases
+    Stores input, expected output, sample/hidden flag, and order for each
+    problem.
+
+submissions
+    Stores submitted source code, language, verdict, runtime, user id,
+    problem id, battle id, and submission time.
+
+battles
+    Stores player ids, problem id, winner id, join code, battle mode, status,
+    start/finish time, and time limit.
+
+battle_participants
+    Stores users who joined battle rooms and whether they are ready.
+
+badges
+    Stores badge definitions and image paths.
+
+user_badges
+    Stores earned badges for users.
+
+squads
+    Stores squad name, description, leader id, and created time.
+
+DBConnection enables SQLite foreign keys with:
+
+    PRAGMA foreign_keys = ON
+
+This helps maintain relationship integrity.
+
+
+23. DAO Layer
+-------------
+DAO means Data Access Object. In CodeArena, DAO classes are responsible for SQL.
+
+Important DAO classes:
+
+UserDAO
+    findByUsername()
+    register()
+    findById()
+    getAll()
+    updateProgress()
+    updateBattleStats()
+    updateProfile()
+    setActive()
+    updateSquad()
+    getAllRanked()
+
+ProblemDAO
+    getAll()
+    getAllIncludingDrafts()
+    getById()
+    filterByDifficulty()
+    filterByTitle()
+    filterByCategoryOrTag()
+    getAcceptanceRate()
+    getRandomPublishedByDifficulty()
+    save()
+    delete()
+
+TestCaseDAO
+    getByProblemId()
+    getSampleByProblemId()
+    save()
+    delete()
+    deleteByProblemId()
+
+SubmissionDAO
+    save()
+    findByUserId()
+    findByProblemId()
+    findAll()
+    countToday()
+    verdictBreakdown()
+    hasAcceptedSubmission()
+    countAcceptedProblems()
+    countAcceptedByDifficulty()
+    countAcceptedByLanguage()
+    delete()
+    deleteByProblemId()
+
+BattleDAO
+    getById()
+    findByUserId()
+    findActiveByUserId()
+    findPendingByCreatorId()
+    findByJoinCode()
+    findQueuedRandomMatch()
+    addParticipant()
+    hasParticipant()
+    countParticipants()
+    markParticipantReady()
+    countReadyParticipants()
+    countCompletedByUserId()
+    countCompletedRandomByUserId()
+    save()
+    delete()
+
+BadgeDAO
+    findAllWithUserStatus()
+    awardBadge()
+
+SquadDAO
+    getById()
+    findByName()
+    getMembers()
+    getAll()
+    save()
+
+The benefit of using DAOs is that SQL is not scattered through the UI.
+
+
+24. Model Classes
+-----------------
+Model classes are simple Java objects. They hold data and expose getters and
+setters.
+
+Important models:
+
+User
+    Represents an account and progress values.
+
+Problem
+    Represents a programming problem.
+
+TestCase
+    Represents one input/expected output pair.
+
+Submission
+    Represents code submitted by a user.
+
+Battle
+    Represents a coding battle room or match.
+
+Badge
+    Represents an achievement badge.
+
+Squad
+    Represents a team/squad.
+
+Difficulty
+    Enum for Easy, Medium, Hard.
+
+These models are passed between UI, services, DAOs, and judge classes.
+
+
+25. Theme, Logo, Splash, and About
+----------------------------------
+Visual/UI code is mainly in:
+
+    ScreenFactory.java
+
+The app supports dark and light mode. ScreenFactory stores theme preference
+using java.util.prefs.Preferences.
+
+Important theme methods:
+
+    isDarkMode()
+    setDarkMode()
+    pageStyle()
+    panelStyle()
+    inputStyle()
+    tableStyle()
+    tabStyle()
+    chartStyle()
+    primaryButtonStyle()
+    secondaryButtonStyle()
+    applyTheme()
+
+The logo path changes based on theme using:
+
+    themeLogoPath()
+
+Dark mode uses the newer dark logo assets. Light mode uses the old orange and
+white style logo.
+
+The splash/loading screen uses:
+
+    title_screen.png
+    title_screen_2.png
+
+MainApp swaps between these images to create a moving loading-bar effect.
+
+The About dialog is created in:
+
+    ScreenFactory.showAboutDialog()
+
+It displays the app name, description, developer credits, and tech stack.
+
+
+26. Testing
+-----------
+Tests are under:
+
+    src/test/java
+
+Important test files:
+
+ServiceIntegrationTest
+    Tests login/register, inactive user rejection, problem filtering, admin
+    validation, badge milestones, progress updates, and squad logic.
+
+JudgeEngineIntegrationTest
+    Tests Java accepted answer, wrong answer, compilation error, runtime error,
+    timeout, sandbox cleanup, and Python checks when Python is installed.
+
+PersistenceInitializationTest
+    Tests that a fresh database can initialize users, problems, test cases, and
+    badges from schema and seed resources.
+
+TestDatabase
+    Provides test database reset helpers. Tests use a separate database under
+    target/test-data, so they do not damage the real demo database.
+
+Run tests with:
+
+    mvn test
+
+
+27. Demo Flow You Can Present
+-----------------------------
+Suggested live demo order:
+
+1. Launch CodeArena.
+2. Show the splash/loading screen.
+3. Login as admin.
+4. Show admin panel.
+5. Explain that admin can manage users, problems, test cases, submissions, and
+   analytics.
+6. Go from admin panel to coder dashboard.
+7. Show dashboard stats: XP, solved count, battles, streak, top coders.
+8. Open Problems.
+9. Search/filter problems.
+10. Open a problem detail page.
+11. Explain sample test cases and hidden test cases.
+12. Open code editor.
+13. Run a wrong answer and show WA result cards.
+14. Fix code and submit.
+15. Explain JudgeService, JudgeEngine, Sandbox, TestCaseRunner, and Verdict.
+16. Show updated XP/rank/badges if accepted.
+17. Open Profile.
+18. Show performance charts, submission history, battle history, and badges.
+19. Open Leaderboard.
+20. Open Battle screens and explain battle flow.
+21. Open Squad screen and explain team feature.
+22. Mention SQLite local database and tests.
+
+
+28. Short Explanation for Viva
+------------------------------
+CodeArena is built as a layered JavaFX desktop app. The UI is created in
+ScreenFactory. When the user logs in, AuthService validates credentials using
+UserDAO and BCrypt, then SessionManager stores the current user. The problem
+screens use ProblemService and ProblemDAO to load published problems and test
+case samples.
+
+When a user writes code, ScreenFactory creates a Submission object and sends it
+to JudgeService. JudgeService runs the judge in a background JavaFX Task so the
+UI does not freeze. JudgeEngine writes the code into a temporary sandbox folder,
+compiles Java or checks Python syntax, loads test cases from SQLite, and asks
+TestCaseRunner to execute the program for each input. TestCaseRunner captures
+stdout/stderr, applies a time limit, compares output with expected output, and
+returns a Verdict. JudgeEngine stores the final verdict and cleans temporary
+files.
+
+If the submission is accepted, UserProgressService updates XP, rank, solved
+count, streak, and battle stats. BadgeService checks milestones and awards
+badges. ProfileService loads submissions, battles, charts, badges, and editable
+profile details. AdminService handles users, problems, test cases, and
+submissions, while AnalyticsService calculates admin dashboard metrics. All data
+is stored in SQLite through DAO classes, and the schema/seed files recreate the
+initial database.
+
+
+29. Main Class Association Summary
+----------------------------------
+Login/Register:
+    ScreenFactory -> AuthService -> UserDAO -> users table
+    AuthService -> BCrypt
+    ScreenFactory -> SessionManager -> NavigationUtil
+
+Problem browsing:
+    ScreenFactory -> ProblemService -> ProblemDAO -> problems table
+    ProblemService -> SubmissionDAO for solved status
+    ProblemService -> TestCaseDAO for samples
+
+Code execution:
+    ScreenFactory -> JudgeService -> JudgeEngine
+    JudgeEngine -> Sandbox
+    JudgeEngine -> TestCaseDAO
+    JudgeEngine -> TestCaseRunner
+    JudgeEngine -> SubmissionDAO
+    TestCaseRunner -> ProcessBuilder
+    PythonRuntime -> Python command lookup
+
+Progress:
+    ScreenFactory -> UserProgressService -> UserDAO
+    UserProgressService -> XPCalculator
+    UserProgressService -> BadgeService
+
+Badges:
+    ProfileService -> BadgeService -> BadgeDAO
+    BadgeService -> SubmissionDAO, BattleDAO, UserDAO
+
+Profile:
+    ScreenFactory -> ProfileService
+    ProfileService -> UserDAO, SubmissionDAO, BattleDAO, ProblemDAO, BadgeService
+
+Battles:
+    ScreenFactory -> BattleService
+    BattleService -> BattleDAO, UserDAO, ProblemDAO, UserProgressService
+    Battle arena -> JudgeService
+
+Squads:
+    ScreenFactory -> SquadService
+    SquadService -> SquadDAO, UserDAO
+
+Admin:
+    ScreenFactory -> AdminService
+    AdminService -> UserDAO, ProblemDAO, TestCaseDAO, SubmissionDAO
+    ScreenFactory -> AnalyticsService -> UserDAO, SubmissionDAO, ProblemDAO
+
+Persistence:
+    MainApp -> PersistenceHandler
+    PersistenceHandler -> DBConnection
+    PersistenceHandler -> SchemaInitializer
+    PersistenceHandler -> SeedInitializer
+

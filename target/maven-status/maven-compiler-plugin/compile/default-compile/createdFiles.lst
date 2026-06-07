@@ -43,6 +43,7 @@ com\codearena\model\TestCase.class
 com\codearena\judge\Sandbox.class
 com\codearena\util\DBConnection.class
 com\codearena\dao\BadgeDAO.class
+com\codearena\judge\PythonRuntime.class
 com\codearena\ui\ScreenFactory$2.class
 com\codearena\dao\TestCaseDAO.class
 com\codearena\model\BaseEntity.class

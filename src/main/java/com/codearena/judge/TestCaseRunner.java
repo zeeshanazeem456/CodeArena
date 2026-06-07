@@ -69,7 +69,11 @@ public final class TestCaseRunner {
 
     private static String[] runCommand(String language) {
         if ("Python".equalsIgnoreCase(language)) {
-            return new String[]{"python", "solution.py"};
+            String[] command = PythonRuntime.runCommand("solution.py");
+            if (command.length == 0) {
+                throw new IllegalStateException("Python runtime was not found on PATH.");
+            }
+            return command;
         }
         return new String[]{"java", "-cp", ".", "Solution"};
     }

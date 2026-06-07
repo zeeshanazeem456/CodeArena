@@ -393,26 +393,50 @@ public final class SeedInitializer {
                 "/images/badges/first_solve.png", 10);
         ensureBadge("SOLVE_5", "Warm Up", "Solve 5 programming problems.", "Problems",
                 "/images/badges/solve_5.png", 20);
+        ensureBadge("SOLVE_10", "Tenacious Solver", "Solve 10 programming problems.", "Problems",
+                "/images/badges/solve_10.png", 25);
         ensureBadge("SOLVE_25", "Problem Hunter", "Solve 25 programming problems.", "Problems",
                 "/images/badges/solve_25.png", 30);
+        ensureBadge("SOLVE_50", "Problem Slayer", "Solve 50 programming problems.", "Problems",
+                "/images/badges/solve_50.png", 35);
+        ensureBadge("FIRST_MEDIUM", "Middle Ground", "Solve your first Medium problem.", "Problems",
+                "/images/badges/first_medium.png", 37);
+        ensureBadge("MEDIUM_5", "Steady Climber", "Solve 5 Medium problems.", "Problems",
+                "/images/badges/medium_5.png", 38);
         ensureBadge("FIRST_HARD", "Hard Mode", "Solve your first Hard problem.", "Problems",
                 "/images/badges/first_hard.png", 40);
+        ensureBadge("HARD_5", "Hardliner", "Solve 5 Hard problems.", "Problems",
+                "/images/badges/hard_5.png", 45);
         ensureBadge("JAVA_SOLVER", "Java Solver", "Get an accepted solution in Java.", "Languages",
                 "/images/badges/java_solver.png", 50);
+        ensureBadge("JAVA_5", "Java Regular", "Get 5 accepted Java solutions.", "Languages",
+                "/images/badges/java_5.png", 55);
         ensureBadge("PYTHON_SOLVER", "Python Solver", "Get an accepted solution in Python.", "Languages",
                 "/images/badges/python_solver.png", 60);
+        ensureBadge("PYTHON_5", "Python Regular", "Get 5 accepted Python solutions.", "Languages",
+                "/images/badges/python_5.png", 65);
         ensureBadge("FIRST_BATTLE", "First Duel", "Complete your first battle.", "Battles",
                 "/images/badges/first_battle.png", 70);
         ensureBadge("FIRST_BATTLE_WIN", "Arena Rookie", "Win your first battle.", "Battles",
                 "/images/badges/first_battle_win.png", 80);
         ensureBadge("BATTLE_WINS_5", "Duelist", "Win 5 battles.", "Battles",
                 "/images/badges/battle_wins_5.png", 90);
+        ensureBadge("BATTLE_WINS_10", "Arena Veteran", "Win 10 battles.", "Battles",
+                "/images/badges/battle_wins_10.png", 95);
         ensureBadge("RANDOM_BATTLES_10", "Random Warrior", "Complete 10 random 1v1 battles.", "Battles",
                 "/images/badges/random_battles_10.png", 100);
+        ensureBadge("BATTLES_25", "Battle Tested", "Complete 25 battles.", "Battles",
+                "/images/badges/battles_25.png", 105);
         ensureBadge("STREAK_3", "3 Day Spark", "Build a 3 day solving streak.", "Consistency",
                 "/images/badges/streak_3.png", 110);
         ensureBadge("STREAK_7", "7 Day Flame", "Build a 7 day solving streak.", "Consistency",
                 "/images/badges/streak_7.png", 120);
+        ensureBadge("STREAK_14", "Fortnight Focus", "Build a 14 day solving streak.", "Consistency",
+                "/images/badges/streak_14.png", 130);
+        ensureBadge("XP_500", "XP Collector", "Reach 500 XP.", "Progress",
+                "/images/badges/xp_500.png", 140);
+        ensureBadge("XP_1000", "XP Master", "Reach 1000 XP.", "Progress",
+                "/images/badges/xp_1000.png", 150);
     }
 
     private static void ensureBadge(String code, String name, String description, String category,

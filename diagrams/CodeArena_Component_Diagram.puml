@@ -1,0 +1,151 @@
+@startuml CodeArena_Component_Diagram
+title CodeArena Component Diagram
+
+skinparam backgroundColor #FAFBFC
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam DefaultFontName Arial
+skinparam ArrowColor #374151
+skinparam package {
+  BorderColor #374151
+  FontStyle bold
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #2563EB
+}
+skinparam database {
+  BackgroundColor #DCFCE7
+  BorderColor #166534
+}
+skinparam artifact {
+  BackgroundColor #FEF3C7
+  BorderColor #92400E
+}
+
+left to right direction
+
+actor "Coder / Admin" as User
+
+package "Presentation Layer" #E0F2FE {
+  component "MainApp\n(JavaFX entry point)" as MainApp
+  component "ScreenFactory\n(JavaFX screens + UI flow)" as ScreenFactory
+  component "NavigationUtil" as NavigationUtil
+  component "SessionManager" as SessionManager
+}
+
+package "Service Layer" #EEF2FF {
+  component "AuthService" as AuthService
+  component "ProblemService" as ProblemService
+  component "JudgeService" as JudgeService
+  component "BattleService" as BattleService
+  component "SquadService" as SquadService
+  component "ProfileService" as ProfileService
+  component "LeaderboardService" as LeaderboardService
+  component "AdminService" as AdminService
+  component "AnalyticsService" as AnalyticsService
+  component "UserProgressService" as UserProgressService
+  component "BadgeService" as BadgeService
+}
+
+package "Judge Subsystem" #FEF9C3 {
+  interface "Submission Evaluation" as ISubmissionEvaluation
+  component "JudgeEngine" as JudgeEngine
+  component "TestCaseRunner" as TestCaseRunner
+  component "Sandbox" as Sandbox
+  component "PythonRuntime" as PythonRuntime
+  enum "Verdict\nAC / WA / CE / RE / TLE" as Verdict
+}
+
+package "Data Access Layer" #DCFCE7 {
+  component "DAO Components\nUserDAO, ProblemDAO,\nSubmissionDAO, TestCaseDAO,\nBattleDAO, SquadDAO, BadgeDAO" as DAOs
+  component "DBConnection" as DBConnection
+  database "SQLite Database\ncodearena.db" as SQLite
+}
+
+package "Persistence / Bootstrap" #FCE7F3 {
+  component "PersistenceHandler" as PersistenceHandler
+  component "SchemaInitializer" as SchemaInitializer
+  component "SeedInitializer" as SeedInitializer
+  artifact "schema.sql + seed.sql" as SeedFiles
+}
+
+package "Domain Model" #F3F4F6 {
+  component "Model Classes\nUser, Problem, Submission,\nTestCase, Battle, Badge,\nSquad, Difficulty" as Models
+}
+
+package "External Runtime Dependencies" #F3E8FF {
+  component "JavaFX 21" as JavaFX
+  component "SQLite JDBC" as SQLiteJDBC
+  component "BCrypt" as BCrypt
+  component "ProcessBuilder" as ProcessBuilder
+  component "Local Toolchain\njavac, java,\npython/python3/py -3" as Toolchain
+}
+
+artifact "Image Resources\nlogos, title screens,\nbadge images" as Images
+
+User --> ScreenFactory : uses screens
+MainApp --> PersistenceHandler : initialize / shutdown
+MainApp --> ScreenFactory : creates first scene
+MainApp --> Images : loads icon + splash
+ScreenFactory --> NavigationUtil : screen changes
+ScreenFactory --> SessionManager : current user
+ScreenFactory --> JavaFX : controls, scenes, charts
+
+ScreenFactory --> AuthService
+ScreenFactory --> ProblemService
+ScreenFactory --> JudgeService
+ScreenFactory --> BattleService
+ScreenFactory --> SquadService
+ScreenFactory --> ProfileService
+ScreenFactory --> LeaderboardService
+ScreenFactory --> AdminService
+ScreenFactory --> AnalyticsService
+
+AuthService --> BCrypt : hash / verify passwords
+AuthService --> DAOs
+ProblemService --> DAOs
+BattleService --> DAOs
+SquadService --> DAOs
+ProfileService --> DAOs
+LeaderboardService --> DAOs
+AdminService --> DAOs
+AnalyticsService --> DAOs
+UserProgressService --> DAOs
+BadgeService --> DAOs
+
+JudgeService - ISubmissionEvaluation
+ISubmissionEvaluation - JudgeEngine
+JudgeService --> JavaFX : background Task + Platform.runLater
+JudgeEngine --> DAOs : load test cases\nsave submissions
+JudgeEngine --> Sandbox : write / cleanup temp files
+JudgeEngine --> TestCaseRunner : run each test case
+JudgeEngine --> Verdict
+TestCaseRunner --> Verdict
+TestCaseRunner --> ProcessBuilder : start user program
+JudgeEngine --> ProcessBuilder : compile / syntax check
+PythonRuntime --> Toolchain : find Python command
+ProcessBuilder --> Toolchain : compile and execute
+
+DAOs --> DBConnection
+DBConnection --> SQLiteJDBC
+DBConnection --> SQLite
+
+PersistenceHandler --> DBConnection
+PersistenceHandler --> SchemaInitializer
+PersistenceHandler --> SeedInitializer
+SchemaInitializer --> SeedFiles
+SeedInitializer --> SeedFiles
+SchemaInitializer --> SQLite
+SeedInitializer --> SQLite
+
+ScreenFactory --> Models
+AuthService --> Models
+ProblemService --> Models
+BattleService --> Models
+SquadService --> Models
+ProfileService --> Models
+DAOs --> Models
+JudgeEngine --> Models
+
+@enduml

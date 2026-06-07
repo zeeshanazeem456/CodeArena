@@ -1,0 +1,75 @@
+@startuml CodeArena_Deployment_Diagram
+title CodeArena Deployment Diagram
+
+skinparam backgroundColor #FAFBFC
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam ArrowColor #374151
+skinparam DefaultFontName Arial
+skinparam DefaultTextAlignment center
+skinparam node {
+  BackgroundColor #F3F4F6
+  BorderColor #374151
+}
+skinparam artifact {
+  BackgroundColor #FEF3C7
+  BorderColor #92400E
+}
+skinparam database {
+  BackgroundColor #DCFCE7
+  BorderColor #166534
+}
+
+left to right direction
+
+actor "Coder / Admin" as User
+
+node "User Workstation\n<<device>>" as Workstation {
+  node "Java 17 Runtime + JavaFX 21\n<<executionEnvironment>>" as JavaRuntime {
+    artifact "codearena-1.0-SNAPSHOT.jar\n<<artifact>>" as App
+
+    component "JavaFX UI\nMainApp + ScreenFactory" as UI
+    component "Service Layer\nAuth, Problems, Battles,\nProfile, Admin, Judge" as Services
+    component "DAO Layer\nUserDAO, ProblemDAO,\nSubmissionDAO, TestCaseDAO" as DAO
+    component "Local Judge\nJudgeService + JudgeEngine" as Judge
+    artifact "Packaged Resources\nschema.sql, seed.sql,\nimages/badges/logos" as Resources
+  }
+
+  database "SQLite Database File\n<<artifact>>\ndata/codearena.db" as SQLite
+
+  node "OS Temp Sandbox\n<<executionEnvironment>>\n%TEMP%/codearena/{submissionId}" as Sandbox {
+    artifact "Submitted Source\nSolution.java / solution.py" as Source
+    artifact "Compiled Output\nSolution.class" as ClassFile
+  }
+
+  node "Local Toolchain on PATH\n<<executionEnvironment>>" as Toolchain {
+    artifact "javac" as Javac
+    artifact "java" as JavaCmd
+    artifact "python / python3 / py -3\n(optional)" as Python
+  }
+}
+
+User --> UI : keyboard / mouse
+UI --> Services : screen actions
+Services --> DAO : business requests
+DAO --> SQLite : JDBC / SQLite
+
+App --> Resources : loads bundled files
+Resources --> SQLite : create schema + seed data\non first launch
+
+Services --> Judge : run samples / submit solution
+Judge --> DAO : load test cases\nsave submissions
+Judge --> Sandbox : write temp source\ncleanup after run
+Judge --> Toolchain : ProcessBuilder\ncompile/run
+Javac --> Source : compiles Java source
+Javac --> ClassFile : creates
+JavaCmd --> ClassFile : executes Java submission
+Python --> Source : py_compile / execute Python
+Toolchain --> Judge : stdout, stderr,\nexit code, timeout
+
+note bottom of Workstation
+CodeArena deploys as a local desktop application.
+There is no web frontend, REST API, remote server, or network database.
+end note
+
+@enduml

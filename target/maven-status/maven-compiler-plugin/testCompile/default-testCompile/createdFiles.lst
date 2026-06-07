@@ -1,0 +1,4 @@
+com\codearena\judge\JudgeEngineIntegrationTest.class
+com\codearena\TestDatabase.class
+com\codearena\service\ServiceIntegrationTest.class
+com\codearena\util\PersistenceInitializationTest.class

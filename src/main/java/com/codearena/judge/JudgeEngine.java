@@ -99,9 +99,17 @@ public class JudgeEngine {
 
     private Verdict compile(Path directory, String language) throws IOException, InterruptedException {
         if ("Python".equalsIgnoreCase(language)) {
-            return Verdict.AC;
+            String[] command = PythonRuntime.compileCommand("solution.py");
+            if (command.length == 0) {
+                return Verdict.RE;
+            }
+            return compileWithCommand(directory, command);
         }
-        ProcessBuilder processBuilder = new ProcessBuilder("javac", "Solution.java");
+        return compileWithCommand(directory, "javac", "Solution.java");
+    }
+
+    private Verdict compileWithCommand(Path directory, String... command) throws IOException, InterruptedException {
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.directory(directory.toFile());
         processBuilder.redirectErrorStream(true);
 
